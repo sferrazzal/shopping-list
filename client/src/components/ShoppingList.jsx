@@ -1,8 +1,7 @@
 import React from "react";
 import Item from './Item';
 import ItemsApi from "../apis/ItemsApi";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 
 const ShoppingList = () => {
     const [items, setItems] = useState();
