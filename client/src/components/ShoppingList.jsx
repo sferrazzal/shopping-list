@@ -1,6 +1,6 @@
 import React from "react";
 import Item from './Item';
-import ItemsApi from "../apis/ItemsApi";
+import BackendApi from "../apis/BackendApi";
 import { useState, useEffect } from "react";
 
 const ShoppingList = () => {
@@ -8,7 +8,8 @@ const ShoppingList = () => {
 
     useEffect(() => {
         const updateItems = async() => {
-            const allItems = await ItemsApi.getAllItems();
+            //TODO: Get items specific to shopping list
+            const allItems = await BackendApi.getAllItems();
             setItems(allItems);
         }
 
@@ -16,7 +17,7 @@ const ShoppingList = () => {
     }, [])
 
     return (
-        <div>
+        <div className="text-center">
             {items && items.map((item) => {
                 return <Item key={item.id} name={item.name}></Item>
             })}
