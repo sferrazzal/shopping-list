@@ -1,10 +1,11 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 
-const Header = () => {
+const Header = (props) => {
+    const location = useLocation();
+
     return (
-        <div>
-            <h1>Shopping List</h1>
-        </div>
+        <h1 className="header text-center">{props.text}</h1>
     )
 }
 
