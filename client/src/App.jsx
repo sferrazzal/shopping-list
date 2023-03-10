@@ -9,18 +9,16 @@ import RecipeDetail from './routes/RecipeDetail';
 
 const App = () => {
     return (
-        <div>
-            <Router>
-                <Routes>
-                    <Route path="/" element={<Home/>}></Route>
-                    <Route path="/lists" element={<Lists/>}></Route>
-                    <Route path="/lists/:id" element={<ListDetail/>}></Route>
-                    <Route path="/recipes" element={<Recipes/>}></Route>
-                    <Route path="/recipes/:id" element={<RecipeDetail/>}></Route>
-                    <Route path="/items" element={<Items/>}></Route>
-                </Routes>
-            </Router>
-        </div>
+        <Router>
+            <Routes>
+                <Route path="/" element={<Home/>}></Route>
+                <Route path="/lists" element={<Lists/>}></Route>
+                <Route path="/lists/:id" element={<ListDetail/>}></Route>
+                <Route path="/recipes" element={<Recipes/>}></Route>
+                <Route path="/recipes/:id" element={<RecipeDetail/>}></Route>
+                <Route path="/items" element={<Items/>}></Route>
+            </Routes>
+        </Router>
     )
 }
 
