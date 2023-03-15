@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import BackendApi from "../apis/BackendApi";
 import Item from "../components/Item";
 import TextInput from "../components/TextInput";
+import StaticExample from "../components/StaticExample";
 
 const Items = () => {
     const [items, setItems] = useState();
@@ -57,6 +58,7 @@ const Items = () => {
 
     return (
         <div>
+            <StaticExample></StaticExample>
             <NavBar></NavBar>
             <Header text="Items"></Header>
             <TextInput callback={(item) => addItemToDatabase(item)} placeholderText="New Item" buttonText="Add Item"></TextInput>
