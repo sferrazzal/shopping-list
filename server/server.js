@@ -11,21 +11,40 @@ app.use(express.json());
 
 //GET all items
 app.get("/api/v1/items", async(req, res) => {
-    try {
-        const itemsResult = await db.query("SELECT * FROM items");
-        const itemIdsArray = itemsResult.rows.map(x => x.id);
-        const tagsResult = await db.query("SELECT item_id, tag_text FROM items_tags WHERE item_id = ANY ($1)", [itemIdsArray]);
-        appendTagsToItems(itemsResult, tagsResult);
-        res.status(200).json({
-            status: "success",
-            count: itemsResult.rows.length,
-            data: {
-                items: itemsResult.rows
+    if (req.query.name) {
+        const [op, searchString] = req.query.name.split(".");
+        if (op === "sw") {
+            try {
+                const itemsResult = await db.query("SELECT name FROM items WHERE name LIKE ($1)", [searchString + "%"]);
+                res.status(200).json({
+                    status: "success",
+                    count: itemsResult.rows.length,
+                    data: {
+                        items: itemsResult.rows
+                    }
+                });
+            } catch (e) {
+                console.log(e);
+                res.sendStatus(500);
             }
-        });
-    } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        }
+    } else {
+        try {
+            const itemsResult = await db.query("SELECT id, name FROM items");
+            const itemIdsArray = itemsResult.rows.map(x => x.id);
+            const tagsResult = await db.query("SELECT item_id, tag_text FROM items_tags WHERE item_id = ANY ($1)", [itemIdsArray]);
+            appendTagsToItems(itemsResult, tagsResult);
+            res.status(200).json({
+                status: "success",
+                count: itemsResult.rows.length,
+                data: {
+                    items: itemsResult.rows
+                }
+            });
+        } catch (e) {
+            console.log(e);
+            res.sendStatus(500);
+        }
     }
 });
 
@@ -136,10 +155,15 @@ app.get("/api/v1/tags", async(req, res) => {
 app.post("/api/v1/items", async(req, res) => {
     try {
         const result = await db.query("INSERT INTO items (name) VALUES ($1)", [req.body.newItemName]);
+        console.log(result);
         res.status(201).json({
             status: "success"
         });
     } catch (e) {
+        if (e.code === '23505') {
+            console.log("duplicate");
+        }
+        console.log(e.code);
         console.log(e);
         res.sendStatus(500);
     }
