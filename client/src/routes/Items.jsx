@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import BackendApi from "../apis/BackendApi";
 import Item from "../components/Item";
 import TextInput from "../components/TextInput";
-import StaticExample from "../components/StaticExample";
+import AddItemsModal from "../components/AddItemsModal";
 
 const Items = () => {
     const [items, setItems] = useState();
@@ -21,7 +21,7 @@ const Items = () => {
 
     const addItemToDatabase = async(itemName) => {
         try {
-            const result = await BackendApi.addItemToItems(itemName);
+            const result = await BackendApi.addItemToDatabase(itemName);
             if (result.status = "success") {
                 setItems((prev) => {
                     const nextId = items.reduce((a, b) => a.id > b.id? a.id : b.id) + 1;
@@ -58,14 +58,13 @@ const Items = () => {
 
     return (
         <div>
-            <StaticExample></StaticExample>
             <NavBar></NavBar>
             <Header text="Items"></Header>
             <TextInput callback={(item) => addItemToDatabase(item)} placeholderText="New Item" buttonText="Add Item"></TextInput>
             <div className="container">
                 <div className="row my-2" style={{margin: 'auto'}}>
                     <button className="btn btn-primary me-2 col">Add Tag to Selected Items</button>
-                    <button className="btn btn-primary col">Add New Item(s)</button>
+                    <AddItemsModal callback={(item) => addItemToDatabase(item)}></AddItemsModal>
                 </div>
             </div>
 

@@ -9,11 +9,17 @@ const getAllItems = async () => {
     return jsonResponse.items;
 };
 
-const addItemToItems = async (itemName) => {
+const addItemToDatabase = async (itemName) => {
     const itemsUrl = baseUrl + itemsEndpoint;
     const payload = JSON.stringify({newItemName: itemName});
     const jsonResponse = await (post(itemsUrl, payload));
     return jsonResponse;
+}
+
+const getItemsStartingWith = async (searchString) => {
+    const searchUrl = baseUrl + itemsEndpoint + "?name=sw." + searchString;
+    const jsonResponse = await get(searchUrl);
+    return jsonResponse.items.map(item => item.name);
 }
 
 const addTagToItems = async (itemIds, tagName) => {
@@ -89,7 +95,8 @@ const BackendApi = {
     getListInfo,
     getAllRecipes,
     getRecipeInfo,
-    addItemToItems,
+    addItemToDatabase,
+    getItemsStartingWith,
     addTagToItems,
 };
 
