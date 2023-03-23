@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
-import BackendApi from '../apis/BackendApi';
+import BackendApi from '../../apis/BackendApi';
 
 function AddItemsModal(props) {
   const [show, setShow] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [searchResults, setSearchResults] = useState(["test1", "test2", "test3", "test4", "we're rendering from searchResults"])
+  const [searchResults, setSearchResults] = useState([])
 
   // Result Info
   const [addItemResultText, setAddItemResultText] = useState("");
@@ -21,7 +21,6 @@ function AddItemsModal(props) {
   const handleShow = () => setShow(true);
 
   const handleInputChange = (e) => {
-    console.log("blah");
     e.preventDefault();
     setInputText(e.target.value);
     updateSearchResults(e.target.value);
@@ -46,7 +45,6 @@ function AddItemsModal(props) {
     }
     
     const result = await props.callback(inputText);
-    console.log(result);
     setResultColor("text-success");
     setAddItemResultText("Item added");
 

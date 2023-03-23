@@ -1,8 +1,11 @@
 const baseUrl = "http://localhost:4000/api/v1/";
-const itemsEndpoint = "items/";
-const listsEndpoint = "lists/";
-const recipesEndpoint = "recipes/";
-const tagsEndpoint = "tags/";
+
+const itemsEndpoint = "items";
+const listsEndpoint = "lists";
+const recipesEndpoint = "recipes";
+const tagsEndpoint = "tags";
+
+const deleteByIdsOperationString = ":deletebyids";
 
 const getAllItems = async () => {
     const jsonResponse = await get(baseUrl + itemsEndpoint);
@@ -12,8 +15,16 @@ const getAllItems = async () => {
 const addItemToDatabase = async (itemName) => {
     const itemsUrl = baseUrl + itemsEndpoint;
     const payload = JSON.stringify({newItemName: itemName});
-    const jsonResponse = await (post(itemsUrl, payload));
+    const response = await (post(itemsUrl, payload));
+    const jsonResponse = await response.json();
     return jsonResponse;
+}
+
+const deleteItemsById = async (itemIds) => {
+    const itemsUrl = baseUrl + itemsEndpoint + deleteByIdsOperationString;
+    const payload = JSON.stringify({itemIds: itemIds});
+    const response = await (post(itemsUrl, payload));
+    return response;
 }
 
 const getItemsStartingWith = async (searchString) => {
@@ -25,7 +36,8 @@ const getItemsStartingWith = async (searchString) => {
 const addTagToItems = async (itemIds, tagName) => {
     const tagsUrl = baseUrl + tagsEndpoint;
     const payload = JSON.stringify({itemIds, tagName});
-    const jsonResponse = await post(tagsUrl, payload);
+    const response = await (post(tagsUrl, payload));
+    const jsonResponse = await response.json();
     return jsonResponse;
 }
 
@@ -71,7 +83,6 @@ const get = async(endpoint) => {
 };
 
 const post = async(endpoint, payload) => {
-    console.log(payload);
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -81,8 +92,7 @@ const post = async(endpoint, payload) => {
             },
             body: payload
         });
-        const jsonResponse = await response.json();
-        return jsonResponse;
+        return response;
     } catch (e) {
         console.error(e);
     }
@@ -90,13 +100,14 @@ const post = async(endpoint, payload) => {
 
 const BackendApi = { 
     getAllItems,
+    addItemToDatabase,
+    getItemsStartingWith,
+    deleteItemsById,
     getAllLists,
     getAllTags,
     getListInfo,
     getAllRecipes,
     getRecipeInfo,
-    addItemToDatabase,
-    getItemsStartingWith,
     addTagToItems,
 };
 

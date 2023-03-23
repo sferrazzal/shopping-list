@@ -13,7 +13,7 @@ const Item = (props) => {
     const handleCheckClicked = () => {
         const newCheckedValue = !checked;
         setChecked(newCheckedValue);
-        props.handleChecked(newCheckedValue, props.id)
+        props.handleChecked(newCheckedValue, props.id, props.name)
     }
 
     return (

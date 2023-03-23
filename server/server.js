@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-//GET all items
+// GET all items
 app.get("/api/v1/items", async(req, res) => {
     if (req.query.name) {
         const [op, searchString] = req.query.name.split(".");
@@ -48,7 +48,42 @@ app.get("/api/v1/items", async(req, res) => {
     }
 });
 
-//GET all lists
+// POST a new item
+app.post("/api/v1/items", async(req, res) => {
+    try {
+        const result = await db.query("INSERT INTO items (name) VALUES ($1) RETURNING id", [req.body.newItemName]);
+        console.log(result);
+        res.status(201).json({
+            status: "success",
+            newItemId: result.rows[0].id
+        });
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
+    }
+});
+
+// DELETE a set of items by id
+app.post("/api/v1/items:deleteByIds", async(req, res) => {
+    try {
+        db.tx(async (client) => {
+            try {
+                for (const itemId of req.body.itemIds) {
+                    await client.query('DELETE FROM items WHERE id=$1', [itemId]);
+                }
+            } catch (e) {
+                console.log(e);
+                res.sendStatus(500);
+            }
+        });
+        res.sendStatus(204);
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
+    }
+});
+
+// GET all lists
 app.get("/api/v1/lists", async(req, res) => {
     try {
         const result = await db.query("SELECT * FROM lists");
@@ -65,7 +100,7 @@ app.get("/api/v1/lists", async(req, res) => {
     }
 });
 
-//GET info for a given list
+// GET info for a given list
 app.get("/api/v1/lists/:id", async(req, res) => {
     try {
         const listItemResults = await db.query(
@@ -90,7 +125,7 @@ app.get("/api/v1/lists/:id", async(req, res) => {
     }
 });
 
-//GET all recipes
+// GET all recipes
 app.get("/api/v1/recipes", async(req, res) => {
     try {
         const recipes = await db.query("SELECT id, title FROM recipes");
@@ -107,7 +142,7 @@ app.get("/api/v1/recipes", async(req, res) => {
     }
 });
 
-//GET info for a given recipe
+// GET info for a given recipe
 app.get("/api/v1/recipes/:id", async(req, res) => {
     try {
         const recipeItems = await db.query(
@@ -151,37 +186,27 @@ app.get("/api/v1/tags", async(req, res) => {
     }
 })
 
-//POST a new item
-app.post("/api/v1/items", async(req, res) => {
-    try {
-        const result = await db.query("INSERT INTO items (name) VALUES ($1)", [req.body.newItemName]);
-        console.log(result);
-        res.status(201).json({
-            status: "success"
-        });
-    } catch (e) {
-        if (e.code === '23505') {
-            console.log("duplicate");
-        }
-        console.log(e.code);
-        console.log(e);
-        res.sendStatus(500);
-    }
-});
-
 // POST a new tag
 app.post("/api/v1/tags", async (req, res) => {
     try {
         const rows = [];
-        db.tx(async (client) => {
-            for (const itemId of req.body.itemIds) {
-                const result = await client.query('INSERT INTO items_tags (item_id, tag_text) VALUES ($1, $2) RETURNING item_id, tag_text', [itemId, req.body.tagName]);
+        let duplicateCount = 0;
+        for (const itemId of req.body.itemIds) {
+            try {
+                const result = await db.query('INSERT INTO items_tags (item_id, tag_text) VALUES ($1, $2) RETURNING item_id, tag_text', [itemId, req.body.tagName]);
                 rows.push(result.rows[0]);
-            }      
-        });
+            } catch (e) {
+                if (e.code === '23505') {
+                    duplicateCount++;
+                } else {
+                    console.log(e);
+                }
+            }
+        }      
         res.status(201).json({
             status: 'success',
             addedRecordCount: rows.length,
+            duplicateCount: duplicateCount,
             data: rows
         });
     } catch (e) {

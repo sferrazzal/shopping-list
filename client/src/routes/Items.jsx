@@ -3,29 +3,29 @@ import Header from "../components/Header";
 import { useState, useEffect } from "react";
 import BackendApi from "../apis/BackendApi";
 import Item from "../components/Item";
-import TextInput from "../components/TextInput";
-import AddItemsModal from "../components/AddItemsModal";
+import AddItemsModal from "../components/Modals/AddItemsModal";
+import AddTagsModal from "../components/Modals/AddTagsModal";
+import DeleteItemsModal from "../components/Modals/DeleteItemsModal";
 
 const Items = () => {
     const [items, setItems] = useState();
-    const [checkedItemIds, setCheckedItemIds] = useState([]);
+    const [checkedItems, setCheckedItems] = useState([]);
 
     useEffect(() => {
-        const populateItems = async() => {
-            const allItems = await BackendApi.getAllItems();
-            setItems(allItems);
-        }
-
         populateItems();
     }, [])
+
+    const populateItems = async() => {
+        const allItems = await BackendApi.getAllItems();
+        setItems(allItems);
+    }
 
     const addItemToDatabase = async(itemName) => {
         try {
             const result = await BackendApi.addItemToDatabase(itemName);
             if (result.status = "success") {
                 setItems((prev) => {
-                    const nextId = items.reduce((a, b) => a.id > b.id? a.id : b.id) + 1;
-                    return [...prev, {id: nextId, name: itemName, tags: []}];
+                    return [...prev, {id: result.newItemId, name: itemName, tags: []}];
                 });
                 return true;
             }
@@ -35,47 +35,87 @@ const Items = () => {
         }
     }
 
-    const handleItemChecked = (checked, itemId) => {
+    const handleItemChecked = (checked, itemId, itemName) => {
         if (checked) {
-            setCheckedItemIds((prev) => {
-                return [...prev, itemId]
-            }
-                );
+            setCheckedItems((prev) => {
+                return [...prev, {id: itemId, name: itemName}]
+            });
         } else {
-            setCheckedItemIds((prev) => prev.filter(x => x !== itemId));
+            setCheckedItems((prev) => prev.filter(x=> x.id !== itemId));
         }
     }
 
-    const addTagToItems = async (tagName) => {
+    const addTagToCheckedItems = async (tagName) => {
         try {
-            const result = await BackendApi.addTagToItems(checkedItemIds, tagName);
-            return result.status === "success"? true: false;
+            const result = await BackendApi.addTagToItems(checkedItems.map(x => x.id), tagName);
+            if (result.status === "success") {
+                updateDisplayedTags(tagName);
+                return result;
+            }
+        } catch (e) {
+            console.log(e);
+            return {result: {status: "failure"}};
+        }
+    }
+
+    const updateDisplayedTags = (tagName) => {
+        setItems((prev) => {
+            const checkedItemIds = checkedItems.map(x => x.id);
+            const newItems = prev.map(x => {
+                if (checkedItemIds.includes(x.id)) {
+                    if (!x.tags.includes(tagName)) {
+                        x.tags.push(tagName);
+                    }
+                }
+                return x;
+            });
+            return newItems;
+        });
+    }
+
+    const deleteCheckedItems = async () => {
+        try {
+            const response = await BackendApi.deleteItemsById(checkedItems.map(x => x.id));
+            if (response.status === 204) {
+                stopDisplayingDeletedItems();
+                setCheckedItems([]);
+                return true;
+            }
+            return false;
         } catch (e) {
             console.log(e);
             return false;
         }
     }
 
+    const stopDisplayingDeletedItems = () => {
+        setItems((prev) => {
+            return prev.filter((item) => {
+                return !(checkedItems.map(checkedItem => checkedItem.id).includes(item.id));
+            });
+        });
+    }
+
     return (
         <div>
             <NavBar></NavBar>
             <Header text="Items"></Header>
-            <TextInput callback={(item) => addItemToDatabase(item)} placeholderText="New Item" buttonText="Add Item"></TextInput>
             <div className="container">
                 <div className="row my-2" style={{margin: 'auto'}}>
-                    <button className="btn btn-primary me-2 col">Add Tag to Selected Items</button>
+                    {/* <button className="btn btn-danger me-2 col">Delete Selected Items</button> */}
+                    <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
+                    <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
                     <AddItemsModal callback={(item) => addItemToDatabase(item)}></AddItemsModal>
                 </div>
             </div>
 
             <div className="container">
-                <ul className="list-group">
+                <ul className="list-group mb-5">
                     {items && items.map((item) => {
                         return <Item key={item.id} name={item.name} id={item.id} tags={item.tags} handleChecked={handleItemChecked}></Item>
                     })}
                 </ul>
             </div>
-            <TextInput callback={(tagName) => addTagToItems(tagName)} placeholderText="New Tag" buttonText="Add Tag to Checked Items"></TextInput>
         </div>
     )
 }
