@@ -102,7 +102,6 @@ const Items = () => {
             <Header text="Items"></Header>
             <div className="container">
                 <div className="row my-2" style={{margin: 'auto'}}>
-                    {/* <button className="btn btn-danger me-2 col">Delete Selected Items</button> */}
                     <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
                     <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
                     <AddItemsModal callback={(item) => addItemToDatabase(item)}></AddItemsModal>
