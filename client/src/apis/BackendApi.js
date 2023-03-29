@@ -52,7 +52,7 @@ const getAllLists = async () => {
 };
 
 const getListInfo = async (listId) => {
-    const jsonResponse = await (get(baseUrl + listsEndpoint + listId));
+    const jsonResponse = await (get(baseUrl + listsEndpoint + "/" + listId));
     return {
         title: jsonResponse.name.rows[0].title,
         items: jsonResponse.items
@@ -65,7 +65,7 @@ const getAllRecipes = async() => {
 }
 
 const getRecipeInfo = async (recipeId) => {
-    const jsonResponse = await (get(baseUrl + recipesEndpoint + recipeId));
+    const jsonResponse = await (get(baseUrl + recipesEndpoint + "/" + recipeId));
     return {
         title: jsonResponse.title,
         items: jsonResponse.items
