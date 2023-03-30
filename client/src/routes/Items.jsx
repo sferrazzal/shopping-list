@@ -25,13 +25,16 @@ const Items = () => {
             const result = await BackendApi.addItemToDatabase(itemName);
             if (result.status = "success") {
                 setItems((prev) => {
-                    return [...prev, {id: result.newItemId, name: itemName, tags: []}];
+                    return [...prev, {id: result.item.id, name: result.item.name, tags: []}];
                 });
-                return true;
             }
+            return result;
         } catch (e) {
             console.log(e);
-            return false;
+            return {
+                status: "failure",
+                failureReason: "Unhandled error"
+            };
         }
     }
 
@@ -53,7 +56,7 @@ const Items = () => {
                 return result;
             }
         } catch (e) {
-            console.log(e);
+            console.error(e);
             return {result: {status: "failure"}};
         }
     }
@@ -83,7 +86,7 @@ const Items = () => {
             }
             return false;
         } catch (e) {
-            console.log(e);
+            console.error(e);
             return false;
         }
     }
@@ -104,7 +107,7 @@ const Items = () => {
                 <div className="row my-2" style={{margin: 'auto'}}>
                     <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
                     <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
-                    <AddItemsModal callback={(item) => addItemToDatabase(item)}></AddItemsModal>
+                    <AddItemsModal allowDuplicateDatabaseEntries={false} callback={(item) => addItemToDatabase(item)}></AddItemsModal>
                 </div>
             </div>
 

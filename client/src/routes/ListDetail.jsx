@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import BackendApi from "../apis/BackendApi";
 import Header from "../components/Header";
 import Item from "../components/Item";
+import AddItemsModal from "../components/Modals/AddItemsModal";
 import NavBar from "../components/NavBar";
 
 const ListDetail = () => {
@@ -25,6 +26,22 @@ const ListDetail = () => {
         populateListInfo();
     }, [])
 
+    const addItem = async(itemName) => {
+        const addItemToDatabaseResult = await BackendApi.addItemToDatabase(itemName);
+        if (addItemToDatabaseResult.status === "success") {
+            const itemId = addItemToDatabaseResult.item.id;
+            const addItemToListResult = await BackendApi.addItemToList(itemId, listId)
+            if (addItemToListResult.status === "success") {
+                setItems((prev) => {
+                    return [...prev, addItemToDatabaseResult.item]
+                });
+            }
+            return addItemToListResult;
+        } else if (addItemToDatabaseResult.status === "failure") {
+            return addItemToDatabaseResult;
+        }
+    }
+
     const handleItemChecked = (checked, itemId) => {
         if (checked) {
             setCheckedItemIds((prev) => {
@@ -41,8 +58,13 @@ const ListDetail = () => {
             <NavBar></NavBar>
             <Header text={title ? title: ""}></Header>
             <div className="container">
+                <div className="row">
+                    <AddItemsModal allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} callback={addItem}></AddItemsModal>
+                </div>
+            </div>
+            <div className="container">
                 {items && items.map((item) => {
-                    return <Item key={item.id} name={item.name} id={item.id} tags={item.tags} handleChecked={handleItemChecked} clickable={true}></Item>
+                    return <Item key={item.id} name={item.name} id={item.id} tags={item.tags} quantity={item.quantity} handleChecked={handleItemChecked} clickable={true}></Item>
                 })}
             </div>
         </>

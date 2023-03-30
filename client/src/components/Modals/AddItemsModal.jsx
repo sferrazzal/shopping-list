@@ -36,19 +36,30 @@ function AddItemsModal(props) {
     setSearchResults(results);
   }
 
-  const handleAddItem = async () => {
+  const handleAddItem = async (itemName, clearOnSuccess) => {
     if (inputText === "") return;
-    if (searchResults.includes(inputText)) {
+    const itemExistsInDatabase = searchResults.includes(itemName);
+    if (itemExistsInDatabase && !props.allowDuplicateDatabaseEntries) {
       setResultColor("text-danger");
-      setAddItemResultText("Already in database");
+      setAddItemResultText("Item already in database");
+      return;
+    } 
+    
+    const result = await props.callback(itemName);
+
+    if (result.status === "success") {
+      setResultColor("text-success");
+      setAddItemResultText("Item added");
+      if (clearOnSuccess) {
+        setInputText("");
+        setSearchResults([]);
+      }
+      return;
+    } else {
+      setResultColor("text-danger");
+      setAddItemResultText(result.failureReason);    
       return;
     }
-    
-    const result = await props.callback(inputText);
-    setResultColor("text-success");
-    setAddItemResultText("Item added");
-
-    setInputText("");
   }
 
   return (
@@ -79,17 +90,25 @@ function AddItemsModal(props) {
           </div>
 
           <div className="searchHits">
-            {searchResults.length > 0? <div>Existing items</div>: null}
+            {
+            searchResults.length > 0 ?
+              props.allowAddingFromSearchResults ?
+                <div className="hover">Existing items - press to add</div> :
+                <div>Existing items</div> :
+              null
+            }
             <ul className="list-group" >
               {searchResults.map((result, index) => {
-                return <li className="list-group-item" key={index}>{result}</li>
+                return props.allowAddingFromSearchResults ?
+                <li className="list-group-item list-group-item-action" onClick={() => handleAddItem(result, false)} key={index}>{result}</li> :
+                <li className="list-group-item" key={index}>{result}</li>
               })}
             </ul>
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={handleAddItem}>
-            Add Item
+          <Button variant="primary" onClick={() => handleAddItem(inputText, true)}>
+            Add New Item
           </Button>
         </Modal.Footer>
       </Modal>

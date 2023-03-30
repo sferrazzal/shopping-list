@@ -51,15 +51,28 @@ app.get("/api/v1/items", async(req, res) => {
 // POST a new item
 app.post("/api/v1/items", async(req, res) => {
     try {
-        const result = await db.query("INSERT INTO items (name) VALUES ($1) RETURNING id", [req.body.newItemName]);
-        console.log(result);
+        const result = await db.query("INSERT INTO items (name) VALUES ($1) RETURNING name, id", [req.body.newItemName]);
         res.status(201).json({
             status: "success",
-            newItemId: result.rows[0].id
+            item: result.rows[0]
         });
     } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        // Return existing item upon duplicate entry attempt
+        if (e.code === '23505') {
+            try {
+                const existingItemResult = await db.query('SELECT name, id FROM items WHERE name=$1', [req.body.newItemName])
+                res.status(200).json({
+                    status: "success",
+                    item: existingItemResult.rows[0]
+                })
+            } catch (e) {
+                console.log(e);
+                res.sendStatus(500);
+            }
+        } else {
+            console.log(e);
+            res.sendStatus(500);
+        }
     }
 });
 
@@ -101,13 +114,13 @@ app.get("/api/v1/lists", async(req, res) => {
 });
 
 // GET info for a given list
-app.get("/api/v1/lists/:id", async(req, res) => {
+app.get("/api/v1/lists/:listId", async(req, res) => {
     try {
         const listItemResults = await db.query(
-            'SELECT item_id AS id, name FROM lists_items JOIN items ON items.id = lists_items.item_id WHERE lists_items.list_id = $1;',
-            [req.params.id]
+            'SELECT item_id AS id, name, quantity FROM lists_items JOIN items ON items.id = lists_items.item_id WHERE lists_items.list_id = $1;',
+            [req.params.listId]
         );
-        const listName = await db.query('SELECT title FROM lists WHERE id = $1', [req.params.id]);
+        const listName = await db.query('SELECT title FROM lists WHERE id = $1', [req.params.listId]);
         const itemIdsArray = listItemResults.rows.map(x => x.id);
         const tagsResult = await db.query("SELECT item_id, tag_text FROM items_tags WHERE item_id = ANY ($1)", [itemIdsArray]);
         appendTagsToItems(listItemResults, tagsResult);
@@ -117,6 +130,55 @@ app.get("/api/v1/lists/:id", async(req, res) => {
             data: {
                 name: listName,
                 items: listItemResults.rows
+            }
+        })
+    } catch (e) {
+        console.log(e);
+        res.sendStatus(500);
+    }
+});
+
+// POST a new item to a list
+app.post("/api/v1/lists/:listId", async(req, res) => {
+    try {
+        const result = await db.query(
+            'INSERT INTO lists_items (list_id, item_id, quantity) VALUES ($1, $2, 1)',
+            [req.params.listId, req.body.itemId]
+        );
+        res.status(201).json({
+            status: "success"
+        })
+    } catch (e) {
+        // Return failure message upon duplicate entry attempt
+        if (e.code === '23505') {
+            try {
+                const existingItemResult = await db.query('SELECT id FROM items WHERE name=$1', [req.body.newItemName])
+                res.status(200).json({
+                    status: "failure",
+                    failureReason: "Item already in list"
+                })
+            } catch (e) {
+                console.log(e);
+                res.sendStatus(500);
+            }
+        } else {
+            console.log(e);
+            res.sendStatus(500);
+        }
+    }
+})
+
+// PATCH info for an item in a given list
+app.patch("/api/v1/lists/:listId", async(req, res) => {
+    try {
+        const result = await db.query(
+            'UPDATE lists_items SET quantity=$1 WHERE item_id=$2 AND list_id=$3 RETURNING *',
+            [req.body.quantity, req.body.itemId, req.params.listId]
+        );
+        res.status(200).json({
+            status: "success",
+            data: {
+                
             }
         })
     } catch (e) {
@@ -143,18 +205,18 @@ app.get("/api/v1/recipes", async(req, res) => {
 });
 
 // GET info for a given recipe
-app.get("/api/v1/recipes/:id", async(req, res) => {
+app.get("/api/v1/recipes/:recipeId", async(req, res) => {
     try {
         const recipeItems = await db.query(
             `SELECT item_id AS id, name
             FROM recipes_items
             INNER JOIN items ON items.id = recipes_items.item_id
             WHERE recipes_items.recipe_id = $1;`,
-            [req.params.id]
+            [req.params.recipeId]
         );
         const recipeTitle = await db.query(
             `SELECT title FROM recipes WHERE id = $1`,
-            [req.params.id]
+            [req.params.recipeId]
         )
         res.status(200).json({
             status: "success",
@@ -196,6 +258,7 @@ app.post("/api/v1/tags", async (req, res) => {
                 const result = await db.query('INSERT INTO items_tags (item_id, tag_text) VALUES ($1, $2) RETURNING item_id, tag_text', [itemId, req.body.tagName]);
                 rows.push(result.rows[0]);
             } catch (e) {
+                // Increment duplicate count upon duplicate entry attempt
                 if (e.code === '23505') {
                     duplicateCount++;
                 } else {

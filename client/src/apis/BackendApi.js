@@ -59,6 +59,34 @@ const getListInfo = async (listId) => {
     };
 };
 
+const addItemToList = async (itemId, listId) => {
+    const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
+    const payload = JSON.stringify({itemId});
+    try {
+        const response = await(post(listItemsUrl, payload))
+        const jsonResponse = await response.json();
+        return jsonResponse;
+    } catch (e) {
+        return {
+            status: "failure",
+            failureReason: "Unhandled error encountered when adding item"
+        }
+    }
+}
+
+const updateListItem = async (listId, itemId, quantity) => {
+    const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
+    const payload = JSON.stringify({itemId, quantity});
+    try {
+        const response = await (patch(listItemsUrl, payload));
+        const jsonResponse = await response.json();
+        return jsonResponse();
+    } catch (e) {
+        console.error(e);
+        return {status: "failure"}
+    }
+}
+
 const getAllRecipes = async() => {
     const jsonResponse = await (get(baseUrl + recipesEndpoint));
     return jsonResponse.recipes;
@@ -83,19 +111,25 @@ const get = async(endpoint) => {
 };
 
 const post = async(endpoint, payload) => {
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: payload
-        });
-        return response;
-    } catch (e) {
-        console.error(e);
-    }
+    const response = await executeRequestWithPayload('POST', endpoint, payload);
+    return response;
+}
+
+const patch = async(endpoint, payload) => {
+    const response = await executeRequestWithPayload('PATCH', endpoint, payload);
+    return response;
+}
+
+const executeRequestWithPayload = async(method, endpoint, payload) => {
+    const response = await fetch(endpoint, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: payload
+    });
+    return response;
 }
 
 const BackendApi = { 
@@ -106,6 +140,8 @@ const BackendApi = {
     getAllLists,
     getAllTags,
     getListInfo,
+    addItemToList,
+    updateListItem,
     getAllRecipes,
     getRecipeInfo,
     addTagToItems,

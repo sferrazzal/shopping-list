@@ -35,7 +35,7 @@ const DeleteItemsModal = (props) => {
 
                 </Modal.Header>
                 <Modal.Body>
-                    <div className="text-center fw-bold mb-3">Delete the following items. Are you sure?</div>
+                    <div className="text-center fw-bold mb-3">Deleting items from the database will remove them from all lists.<br/><br/> Are you sure you want to delete the following items?</div>
                     <ul className="list-group mb-3">
                         {props.checkedItems.map((x) => {
                             return <li className="list-group-item" key={x.id}>{x.name}</li>
