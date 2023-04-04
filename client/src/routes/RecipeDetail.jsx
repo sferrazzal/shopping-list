@@ -8,6 +8,7 @@ import BackendApi from "../apis/BackendApi";
 
 const RecipeDetail = () => {
     const location = useLocation();
+    // TODO: Should use params
     const recipeId = location.pathname.slice(-1);
 
     const [items, setItems] = useState();

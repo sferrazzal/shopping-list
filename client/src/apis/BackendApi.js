@@ -74,6 +74,22 @@ const addItemToList = async (itemId, listId) => {
     }
 }
 
+const addItemsFromRecipe = async (listId, recipeId) => {
+    const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
+    const payload = JSON.stringify({recipeId});
+    try {
+        const response = await(post(listItemsUrl, payload))
+        const jsonResponse = await response.json();
+        return jsonResponse;
+    } catch (e) {
+        return {
+            status: "failure",
+            failureReason: "Unhandled error encountered when adding item"
+        }
+    }
+
+}
+
 const updateListItem = async (listId, itemId, quantity) => {
     const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
     const payload = JSON.stringify({itemId, quantity});
@@ -100,6 +116,12 @@ const getRecipeInfo = async (recipeId) => {
     };
 };
 
+const getRecipesStartingWith = async (searchString) => {
+    const searchUrl = baseUrl + recipesEndpoint + "?title=sw." + searchString;
+    const jsonResponse = await get(searchUrl);
+    return jsonResponse.recipes;
+}
+
 const get = async(endpoint) => {
     try {
         const response = await fetch(endpoint);
@@ -121,15 +143,21 @@ const patch = async(endpoint, payload) => {
 }
 
 const executeRequestWithPayload = async(method, endpoint, payload) => {
-    const response = await fetch(endpoint, {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: payload
-    });
-    return response;
+    try {
+        const response = await fetch(endpoint, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: payload
+        });
+        return response;
+    } catch (e) {
+        console.error(e);
+        return {status: 'failure'}
+    }
+
 }
 
 const BackendApi = { 
@@ -141,9 +169,11 @@ const BackendApi = {
     getAllTags,
     getListInfo,
     addItemToList,
+    addItemsFromRecipe,
     updateListItem,
     getAllRecipes,
     getRecipeInfo,
+    getRecipesStartingWith,
     addTagToItems,
 };
 

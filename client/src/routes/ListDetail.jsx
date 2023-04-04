@@ -1,11 +1,11 @@
 import React from "react";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import BackendApi from "../apis/BackendApi";
 import Header from "../components/Header";
 import Item from "../components/Item";
 import AddItemsModal from "../components/Modals/AddItemsModal";
+import AddRecipeModal from "../components/Modals/AddRecipeModal";
 import NavBar from "../components/NavBar";
 
 const ListDetail = () => {
@@ -14,6 +14,7 @@ const ListDetail = () => {
     const [checkedItemIds, setCheckedItemIds] = useState([]);
 
     const location = useLocation();
+    // TODO: Should use params
     const listId = location.pathname.slice(-1);
     
     useEffect(() => {
@@ -42,6 +43,11 @@ const ListDetail = () => {
         }
     }
 
+    const addItemsFromRecipe = async(recipeId) => {
+        const result = await BackendApi.addItemsFromRecipe(listId, recipeId);
+        return result;
+    }
+
     const handleItemChecked = (checked, itemId) => {
         if (checked) {
             setCheckedItemIds((prev) => {
@@ -59,6 +65,7 @@ const ListDetail = () => {
             <Header text={title ? title: ""}></Header>
             <div className="container">
                 <div className="row">
+                    <AddRecipeModal callback={addItemsFromRecipe}></AddRecipeModal>
                     <AddItemsModal allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} callback={addItem}></AddItemsModal>
                 </div>
             </div>

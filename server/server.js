@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// GET all items
+// GET items
 app.get("/api/v1/items", async(req, res) => {
     if (req.query.name) {
         const [op, searchString] = req.query.name.split(".");
@@ -138,30 +138,60 @@ app.get("/api/v1/lists/:listId", async(req, res) => {
     }
 });
 
-// POST a new item to a list
+// POST item(s) to a list
 app.post("/api/v1/lists/:listId", async(req, res) => {
-    try {
-        const result = await db.query(
-            'INSERT INTO lists_items (list_id, item_id, quantity) VALUES ($1, $2, 1)',
-            [req.params.listId, req.body.itemId]
-        );
-        res.status(201).json({
-            status: "success"
-        })
-    } catch (e) {
-        // Return failure message upon duplicate entry attempt
-        if (e.code === '23505') {
-            try {
-                const existingItemResult = await db.query('SELECT id FROM items WHERE name=$1', [req.body.newItemName])
-                res.status(200).json({
-                    status: "failure",
-                    failureReason: "Item already in list"
-                })
-            } catch (e) {
+    if (req.body.itemId) {
+        try {
+            const result = await db.query(
+                'INSERT INTO lists_items (list_id, item_id, quantity) VALUES ($1, $2, 1)',
+                [req.params.listId, req.body.itemId]
+            );
+            res.status(201).json({
+                status: "success"
+            })
+        } catch (e) {
+            // TODO: Replace this with conditional sql?
+            // Return failure message upon duplicate entry attempt
+            if (e.code === '23505') {
+                try {
+                    const existingItemResult = await db.query('SELECT id FROM items WHERE name=$1', [req.body.newItemName])
+                    res.status(200).json({
+                        status: "failure",
+                        failureReason: "Item already in list"
+                    })
+                } catch (e) {
+                    console.log(e);
+                    res.sendStatus(500);
+                }
+            } else {
                 console.log(e);
                 res.sendStatus(500);
             }
-        } else {
+        }
+    } else if (req.body.recipeId) {
+        const itemsInRecipeResult = await db.query("SELECT item_id FROM recipes_items WHERE recipe_id=$1", [req.body.recipeId]);
+        try {
+            const updatedItems = [];
+            for (const row of itemsInRecipeResult.rows) {
+                const updateListItemQuantitiesResult = await db.query(
+                    `INSERT INTO lists_items (list_id, item_id, quantity) 
+                    VALUES ($1, $2, 1) 
+                    ON CONFLICT ON CONSTRAINT lists_items_pkey 
+                    DO UPDATE SET quantity = lists_items.quantity + 1
+                    RETURNING item_id, quantity`,
+                    [req.params.listId, row.item_id]
+                );
+                updatedItems.push({
+                    itemId: updateListItemQuantitiesResult.rows[0].item_id,
+                    quantity: updateListItemQuantitiesResult.rows[0].quantity
+                })
+            }
+            res.status(200).json({
+                status: 'success',
+                updatedItemCount: updatedItems.length,
+                updatedItems: updatedItems
+            });
+        } catch (e) {
             console.log(e);
             res.sendStatus(500);
         }
@@ -187,20 +217,39 @@ app.patch("/api/v1/lists/:listId", async(req, res) => {
     }
 });
 
-// GET all recipes
+// GET recipes
 app.get("/api/v1/recipes", async(req, res) => {
-    try {
-        const recipes = await db.query("SELECT id, title FROM recipes");
-        res.status(200).json({
-            status: "success",
-            count: recipes.rows.length,
-            data: {
-                recipes: recipes.rows
+    if (req.query.title) {
+        const [op, searchString] = req.query.title.split(".");
+        if (op === "sw") {
+            try {
+                const recipesResult = await db.query("SELECT title, id FROM recipes WHERE title LIKE ($1)", [searchString + "%"]);
+                res.status(200).json({
+                    status: "success",
+                    count: recipesResult.rows.length,
+                    data: {
+                        recipes: recipesResult.rows
+                    }
+                });
+            } catch (e) {
+                console.log(e);
+                res.sendStatus(500);
             }
-        });
-    } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        }
+    } else {
+        try {
+            const recipes = await db.query("SELECT id, title FROM recipes");
+            res.status(200).json({
+                status: "success",
+                count: recipes.rows.length,
+                data: {
+                    recipes: recipes.rows
+                }
+            });
+        } catch (e) {
+            console.log(e);
+            res.sendStatus(500);
+        }
     }
 });
 
