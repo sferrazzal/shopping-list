@@ -5,6 +5,7 @@ const listsEndpoint = "lists";
 const recipesEndpoint = "recipes";
 const tagsEndpoint = "tags";
 
+const deleteOperationString = ":delete";
 const deleteByIdsOperationString = ":deletebyids";
 
 const getAllItems = async () => {
@@ -35,6 +36,14 @@ const getItemsStartingWith = async (searchString) => {
 
 const addTagToItems = async (itemIds, tagName) => {
     const tagsUrl = baseUrl + tagsEndpoint;
+    const payload = JSON.stringify({itemIds, tagName});
+    const response = await (post(tagsUrl, payload));
+    const jsonResponse = await response.json();
+    return jsonResponse;
+}
+
+const deleteTagFromItems = async (itemIds, tagName) => {
+    const tagsUrl = baseUrl + tagsEndpoint + deleteOperationString;
     const payload = JSON.stringify({itemIds, tagName});
     const response = await (post(tagsUrl, payload));
     const jsonResponse = await response.json();
@@ -175,6 +184,7 @@ const BackendApi = {
     getRecipeInfo,
     getRecipesStartingWith,
     addTagToItems,
+    deleteTagFromItems
 };
 
 export default BackendApi;

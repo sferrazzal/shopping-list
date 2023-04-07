@@ -1,6 +1,6 @@
 import React from "react";
 import Button from "react-bootstrap/Button";
-import Modal from 'react-bootstrap/Modal'
+import Modal from 'react-bootstrap/Modal';
 import { useState } from "react";
 
 const DeleteItemsModal = (props) => {
@@ -27,7 +27,7 @@ const DeleteItemsModal = (props) => {
 
     return (
         <>
-            <Button className="col" variant="danger" onClick={handleShow}>Delete Selected Items</Button>
+            <Button className="col" variant="danger" onClick={handleShow}>Delete Selected Item(s)</Button>
 
             <Modal show={show} onHide={handleClose}>
                 <Modal.Header closeButton>

@@ -15,6 +15,7 @@ module.exports = {
       } catch(e) {
         console.error(e);
         client.query('ROLLBACK');
+        return e;
       }
     } finally {
       client.release();

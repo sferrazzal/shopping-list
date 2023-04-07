@@ -25,7 +25,7 @@ const ListDetail = () => {
         }
 
         populateListInfo();
-    }, [])
+    }, [listId])
 
     const addItem = async(itemName) => {
         const addItemToDatabaseResult = await BackendApi.addItemToDatabase(itemName);
