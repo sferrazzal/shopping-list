@@ -78,21 +78,16 @@ app.post("/api/v1/items", async(req, res) => {
 
 // DELETE a set of items by id
 app.post("/api/v1/items:deleteByIds", async(req, res) => {
-    try {
-        db.tx(async (client) => {
-            try {
-                for (const itemId of req.body.itemIds) {
-                    await client.query('DELETE FROM items WHERE id=$1', [itemId]);
-                }
-            } catch (e) {
-                console.log(e);
-                res.sendStatus(500);
-            }
-        });
-        res.sendStatus(204);
-    } catch (e) {
+    const error = await db.tx(async (client) => {
+        for (const itemId of req.body.itemIds) {
+            await client.query('DELETE FROM items WHERE id=$1', [itemId]);
+        }
+    });
+    if (error) {
         console.log(e);
         res.sendStatus(500);
+    } else {
+        res.sendStatus(204);
     }
 });
 
@@ -324,6 +319,26 @@ app.post("/api/v1/tags", async (req, res) => {
     } catch (e) {
         console.log(e);
         res.sendStatus(500);
+    }
+});
+
+// DELETE a tag
+app.post('/api/v1/tags:delete', async(req, res) => {
+    let deletedTagCount = 0;
+    const error = await db.tx(async (client) => {
+        for (const itemId of req.body.itemIds) {
+            const result = await client.query('DELETE FROM items_tags WHERE item_id = $1 AND tag_text = $2', [itemId, req.body.tagName]);
+            deletedTagCount += result.rowCount;
+        }
+    });
+    if (error) {
+        console.log(error);
+        res.sendStatus(500);
+    } else {
+        res.status(200).json({
+            status: 'success',
+            deletedTagCount
+        });
     }
 });
 

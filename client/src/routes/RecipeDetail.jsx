@@ -22,7 +22,7 @@ const RecipeDetail = () => {
         }
 
         populateItems();
-    }, [])
+    }, [recipeId])
 
     return (
         <>

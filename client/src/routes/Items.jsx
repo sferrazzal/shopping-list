@@ -6,6 +6,7 @@ import Item from "../components/Item";
 import AddItemsModal from "../components/Modals/AddItemsModal";
 import AddTagsModal from "../components/Modals/AddTagsModal";
 import DeleteItemsModal from "../components/Modals/DeleteItemsModal";
+import DeleteTagsModal from "../components/Modals/DeleteTagsModal";
 
 const Items = () => {
     const [items, setItems] = useState();
@@ -23,7 +24,7 @@ const Items = () => {
     const addItemToDatabase = async(itemName) => {
         try {
             const result = await BackendApi.addItemToDatabase(itemName);
-            if (result.status = "success") {
+            if (result.status === "success") {
                 setItems((prev) => {
                     return [...prev, {id: result.item.id, name: result.item.name, tags: []}];
                 });
@@ -38,10 +39,10 @@ const Items = () => {
         }
     }
 
-    const handleItemChecked = (checked, itemId, itemName) => {
+    const handleItemChecked = (checked, itemId, itemName, itemTags) => {
         if (checked) {
             setCheckedItems((prev) => {
-                return [...prev, {id: itemId, name: itemName}]
+                return [...prev, {id: itemId, name: itemName, tags: itemTags}]
             });
         } else {
             setCheckedItems((prev) => prev.filter(x=> x.id !== itemId));
@@ -52,7 +53,7 @@ const Items = () => {
         try {
             const result = await BackendApi.addTagToItems(checkedItems.map(x => x.id), tagName);
             if (result.status === "success") {
-                updateDisplayedTags(tagName);
+                displayNewTagOnItems(tagName);
                 return result;
             }
         } catch (e) {
@@ -61,7 +62,22 @@ const Items = () => {
         }
     }
 
-    const updateDisplayedTags = (tagName) => {
+    const deleteTagFromItems = async (tagName) => {
+        try {
+            const result = await BackendApi.deleteTagFromItems(checkedItems.map(x => x.id), tagName);
+            if (result.status === "success") {
+                stopDisplayingTagOnItems(tagName);
+                return result;
+            } else {
+                return result;
+            }
+        } catch (e) {
+            console.error(e);
+            return {result: {status: "failure"}};
+        }
+    }
+
+    const displayNewTagOnItems = (tagName) => {
         setItems((prev) => {
             const checkedItemIds = checkedItems.map(x => x.id);
             const newItems = prev.map(x => {
@@ -73,6 +89,30 @@ const Items = () => {
                 return x;
             });
             return newItems;
+        });
+
+        updateCheckedItemsFromItems();
+    }
+
+    const stopDisplayingTagOnItems = (tagName) => {
+        setItems((prev) => {
+            const checkedItemIds = checkedItems.map(x => x.id);
+            return prev.map(x => {
+                if (checkedItemIds.includes(x.id)) {
+                    x.tags = x.tags.filter(tag => tag !== tagName);
+                }
+                return x;
+            });
+        });
+
+        updateCheckedItemsFromItems();
+    }
+
+    const updateCheckedItemsFromItems = () => {
+        setCheckedItems((prev) => {
+            return prev.map(checkedItem => {
+                return items.find(item => item.id === checkedItem.id);
+            });
         });
     }
 
@@ -105,9 +145,12 @@ const Items = () => {
             <Header text="Items"></Header>
             <div className="container">
                 <div className="row my-2" style={{margin: 'auto'}}>
-                    <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
-                    <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
                     <AddItemsModal allowDuplicateDatabaseEntries={false} callback={(item) => addItemToDatabase(item)}></AddItemsModal>
+                    <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
+                </div>
+                <div className="row my-2"  style={{margin: 'auto'}}>
+                    <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
+                    <DeleteTagsModal checkedItems={checkedItems} callback={(tagName) => deleteTagFromItems(tagName)}></DeleteTagsModal>
                 </div>
             </div>
 
