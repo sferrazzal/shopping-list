@@ -105,7 +105,7 @@ const updateListItem = async (listId, itemId, quantity) => {
     try {
         const response = await (patch(listItemsUrl, payload));
         const jsonResponse = await response.json();
-        return jsonResponse();
+        return jsonResponse;
     } catch (e) {
         console.error(e);
         return {status: "failure"}
