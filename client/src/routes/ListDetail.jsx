@@ -59,6 +59,11 @@ const ListDetail = () => {
         }
     }
 
+    const updateItemQuantity = async (itemId, quantity) => {
+        const result = await BackendApi.updateListItem(listId, itemId, quantity);
+        if (result.status === 'failure') console.error(`Failed to update quantity for itemId: ${itemId}`);
+    }
+
     return (
         <>
             <NavBar></NavBar>
@@ -71,7 +76,16 @@ const ListDetail = () => {
             </div>
             <div className="container">
                 {items && items.map((item) => {
-                    return <Item key={item.id} name={item.name} id={item.id} tags={item.tags} quantity={item.quantity} handleChecked={handleItemChecked} clickable={true}></Item>
+                    return <Item 
+                        key={item.id} 
+                        name={item.name} 
+                        id={item.id} 
+                        tags={item.tags} 
+                        quantity={item.quantity}
+                        handleSubmitQuantity={(itemId, quantity) => updateItemQuantity(itemId, quantity)}
+                        handleChecked={handleItemChecked}
+                        clickable={true}
+                    ></Item>
                 })}
             </div>
         </>
