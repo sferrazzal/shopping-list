@@ -10,7 +10,9 @@ import NavBar from "../components/NavBar";
 
 const ListDetail = () => {
     const [title, setTitle] = useState();
-    const [items, setItems] = useState();
+    const [items, setItems] = useState([]);
+    const [recipes, setRecipes] = useState([]);
+    const [recipesForItems, setRecipesForItems] = useState([]);
     const [checkedItemIds, setCheckedItemIds] = useState([]);
 
     const location = useLocation();
@@ -22,10 +24,41 @@ const ListDetail = () => {
             const listInfo = await BackendApi.getListInfo(listId);
             setTitle(listInfo.title);
             setItems(listInfo.items);
+            setRecipes(listInfo.recipes);
         }
 
         populateListInfo();
     }, [listId])
+
+    useEffect(() => {
+        mapRecipesToItems();
+    }, [recipes])
+
+    const mapRecipesToItems = () => {
+        if (recipes.length === 0) {
+            return;
+        }
+        const retval = initializeRecipesForItems();
+
+        for (const recipe of recipes) {
+            for (const item of recipe.items) {
+                retval[item.name].push({
+                    title: recipe.title,
+                    id: recipe.id
+                });
+            }
+        }
+
+        setRecipesForItems(retval);
+    }
+
+    const initializeRecipesForItems = () => {
+        const retval = [];
+        for (const item of items) {
+            retval[item.name] = []
+        }
+        return retval;
+    }
 
     const addItem = async(itemName) => {
         const addItemToDatabaseResult = await BackendApi.addItemToDatabase(itemName);
@@ -80,6 +113,7 @@ const ListDetail = () => {
                         key={item.id} 
                         name={item.name} 
                         id={item.id} 
+                        recipes={recipesForItems[item.name]}
                         tags={item.tags} 
                         quantity={item.quantity}
                         handleSubmitQuantity={(itemId, quantity) => updateItemQuantity(itemId, quantity)}
