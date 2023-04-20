@@ -133,7 +133,7 @@ app.get("/api/v1/lists/:listId", async(req, res) => {
     }
 });
 
-// POST item(s) to a list
+// POST item(s) or a recipe to a list
 app.post("/api/v1/lists/:listId", async(req, res) => {
     if (req.body.itemId) {
         try {
@@ -145,7 +145,7 @@ app.post("/api/v1/lists/:listId", async(req, res) => {
                 status: "success"
             })
         } catch (e) {
-            // TODO: Replace this with conditional sql?
+            // TODO: Replace this with conditional sql
             // Return failure message upon duplicate entry attempt
             if (e.code === '23505') {
                 try {
@@ -164,34 +164,84 @@ app.post("/api/v1/lists/:listId", async(req, res) => {
             }
         }
     } else if (req.body.recipeId) {
-        const itemsInRecipeResult = await db.query("SELECT item_id FROM recipes_items WHERE recipe_id=$1", [req.body.recipeId]);
-        try {
-            const updatedItems = [];
-            for (const row of itemsInRecipeResult.rows) {
-                const updateListItemQuantitiesResult = await db.query(
-                    `INSERT INTO lists_items (list_id, item_id, quantity) 
-                    VALUES ($1, $2, 1) 
-                    ON CONFLICT ON CONSTRAINT lists_items_pkey 
-                    DO UPDATE SET quantity = lists_items.quantity + 1
-                    RETURNING item_id, quantity`,
-                    [req.params.listId, row.item_id]
-                );
-                updatedItems.push({
-                    itemId: updateListItemQuantitiesResult.rows[0].item_id,
-                    quantity: updateListItemQuantitiesResult.rows[0].quantity
-                })
-            }
+        const recipeAlreadyInList = await isRecipeInList(req.body.recipeId, req.params.listId);
+        if (recipeAlreadyInList) {
             res.status(200).json({
                 status: 'success',
-                updatedItemCount: updatedItems.length,
-                updatedItems: updatedItems
+                addedRecipe: null
             });
-        } catch (e) {
-            console.log(e);
+            return;
+        }
+
+        let addedRecipe = {};
+        const error = await db.tx(async (client) => {
+            addedRecipe = await addRecipeToList(client, req.params.listId, req.body.recipeId);
+        });
+        if (error) {
+            console.log(error);
             res.sendStatus(500);
+        } else {
+            res.status(200).json({
+                status: 'success',
+                addedRecipe
+            });
         }
     }
-})
+});
+
+const isRecipeInList = async (recipeId, listId) => {
+    const existingEntriesResult = await db.query("SELECT 1 from lists_recipes WHERE recipe_id=$1 AND list_id=$2", [recipeId, listId]);
+    if (existingEntriesResult.rowCount > 0) return true;
+    return false;
+}
+
+const addRecipeToList = async (client, listId, recipeId) => {
+    await (linkListToRecipe(client, listId, recipeId));
+    const recipe = await getRecipe(client, recipeId);
+    for (const item of recipe.items) {
+        await addItemOrUpdateListQuantity(client, listId, item.item_id, item.quantity);
+    }
+    return recipe;
+}
+
+const linkListToRecipe = async(client, listId, recipeId) => {
+    await client.query('INSERT INTO lists_recipes(list_id, recipe_id) VALUES($1, $2)', [listId, recipeId]);
+}
+
+const getRecipe = async (client, recipeId) => {
+    const items = await getItemsFor(recipeId, client);
+    const name = await getRecipeNameFor(recipeId, client);
+    return {
+        id: recipeId,
+        name,
+        items
+    }
+}
+
+const getItemsFor = async (recipeId, client) => {
+    const itemDetailsResult = await client.query("SELECT item_id, quantity FROM recipes_items WHERE recipe_id=$1", [recipeId]);
+    for (const item of itemDetailsResult.rows) {
+        const itemNameResult = await client.query("SELECT name FROM items WHERE id=($1)", [item.item_id]);
+        item.name = itemNameResult.rows[0].name;
+    }
+    return itemDetailsResult.rows;
+}
+
+const getRecipeNameFor = async (recipeId, client) => {
+    const recipeNameResult = await (client.query('SELECT title FROM recipes WHERE id=$1', [recipeId]));
+    return recipeNameResult.rows[0].name;
+}
+
+const addItemOrUpdateListQuantity = async (client, listId, itemId, quantity) => {
+    await client.query(
+        `INSERT INTO lists_items (list_id, item_id, quantity) 
+        VALUES ($1, $2, 1) 
+        ON CONFLICT ON CONSTRAINT lists_items_pkey 
+        DO UPDATE SET quantity = lists_items.quantity + $3
+        RETURNING item_id, quantity`,
+        [listId, itemId, quantity]
+    );
+}
 
 // PATCH info for an item in a given list
 app.patch("/api/v1/lists/:listId", async(req, res) => {
@@ -252,7 +302,7 @@ app.get("/api/v1/recipes", async(req, res) => {
 app.get("/api/v1/recipes/:recipeId", async(req, res) => {
     try {
         const recipeItems = await db.query(
-            `SELECT item_id AS id, name
+            `SELECT item_id AS AS id, name
             FROM recipes_items
             INNER JOIN items ON items.id = recipes_items.item_id
             WHERE recipes_items.recipe_id = $1;`,

@@ -45,8 +45,12 @@ const AddRecipeModal = (props) => {
     const handleAddRecipe = async (recipeId, recipeTitle) => {
         const result = await props.callback(recipeId);
         if (result.status === 'success') {
-            setAddRecipeResultText(`Successfully added ${recipeTitle}`);
             setResultColor('text-success');
+            if (result.addedRecipe === null) {
+                setAddRecipeResultText(`Recipe "${recipeTitle}" already in list`);
+            } else {
+                setAddRecipeResultText(`Successfully added ${recipeTitle}`);
+            }
             setInputText('');
             setSearchResults([]);
         } else if (result.status === 'failure') {
