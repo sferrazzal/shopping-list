@@ -29,7 +29,9 @@ const Item = (props) => {
     return (
         <li className="list-group-item">
             <div className="row">
-                <div className="col"></div>
+                <div className="col d-flex justify-content-end my-1">
+                    {props.recipes && props.recipes.map(recipe => (<span className="badge bg-danger mx-1" key={props.id + recipe.title}>{recipe.title}</span>))}
+                </div>
                 <div className="col">
                     <input onClick={handleCheckClicked} className="form-check-input me-1 text-center" type="checkbox" value=""/>
                     <h5 style={{textDecoration: textDecoration}} onClick={handleTextClicked} className="card-title text-center d-inline">{props.name}</h5>

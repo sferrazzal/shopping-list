@@ -24,8 +24,7 @@ app.get("/api/v1/items", async(req, res) => {
                     }
                 });
             } catch (e) {
-                console.log(e);
-                res.sendStatus(500);
+                errorResponse(e, res);
             }
         }
     } else {
@@ -33,7 +32,7 @@ app.get("/api/v1/items", async(req, res) => {
             const itemsResult = await db.query("SELECT id, name FROM items");
             const itemIdsArray = itemsResult.rows.map(x => x.id);
             const tagsResult = await db.query("SELECT item_id, tag_text FROM items_tags WHERE item_id = ANY ($1)", [itemIdsArray]);
-            appendTagsToItems(itemsResult, tagsResult);
+            appendTagsToItems(itemsResult.rows, tagsResult.rows);
             res.status(200).json({
                 status: "success",
                 count: itemsResult.rows.length,
@@ -42,11 +41,22 @@ app.get("/api/v1/items", async(req, res) => {
                 }
             });
         } catch (e) {
-            console.log(e);
-            res.sendStatus(500);
+            errorResponse(e, res);
         }
     }
 });
+
+const appendTagsToItems = (items, tags) => {
+    for (const item of items) {
+        item.tags = [];
+        for (const tag of tags) {
+            if (tag.item_id === item.id) {
+                item.tags.push(tag.tag_text);
+            }
+        }
+    }
+}
+
 
 // POST a new item
 app.post("/api/v1/items", async(req, res) => {
@@ -70,8 +80,7 @@ app.post("/api/v1/items", async(req, res) => {
                 res.sendStatus(500);
             }
         } else {
-            console.log(e);
-            res.sendStatus(500);
+            errorResponse(e, res);
         }
     }
 });
@@ -84,8 +93,7 @@ app.post("/api/v1/items:deleteByIds", async(req, res) => {
         }
     });
     if (error) {
-        console.log(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     } else {
         res.sendStatus(204);
     }
@@ -103,35 +111,66 @@ app.get("/api/v1/lists", async(req, res) => {
             }
         });
     } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     }
 });
 
 // GET info for a given list
 app.get("/api/v1/lists/:listId", async(req, res) => {
     try {
-        const listItemResults = await db.query(
-            'SELECT item_id AS id, name, quantity FROM lists_items JOIN items ON items.id = lists_items.item_id WHERE lists_items.list_id = $1;',
-            [req.params.listId]
-        );
-        const listName = await db.query('SELECT title FROM lists WHERE id = $1', [req.params.listId]);
-        const itemIdsArray = listItemResults.rows.map(x => x.id);
-        const tagsResult = await db.query("SELECT item_id, tag_text FROM items_tags WHERE item_id = ANY ($1)", [itemIdsArray]);
-        appendTagsToItems(listItemResults, tagsResult);
+        const title = await getTitleForList(req.params.listId);
+        const recipes = await getRecipesForList(req.params.listId);
+        const items = await getItemsInList(req.params.listId);
+        const tags = await getTagsForItems(items);
+        appendTagsToItems(items, tags);
+
         res.status(200).json({
             status: "success",
-            count: listItemResults.rows.length,
+            itemCount: items.length,
+            recipeCount: recipes.length,
             data: {
-                name: listName,
-                items: listItemResults.rows
+                title,
+                items,
+                recipes
             }
         })
     } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     }
 });
+
+const getTitleForList = async(listId) => {
+    const listTitleResult = await db.query('SELECT title FROM lists WHERE id = $1', [listId]);
+    return listTitleResult.rows[0].title;
+}
+
+const getItemsInList = async (listId) => {
+    const results = await db.query(
+        'SELECT item_id AS id, name, quantity FROM lists_items JOIN items ON items.id = lists_items.item_id WHERE lists_items.list_id = $1;',
+        [listId]
+    );
+
+    return results.rows;
+}
+
+const getTagsForItems = async(items) => {
+    const itemIdsArray = items.map(x => x.id);
+    const tagsResult = await db.query("SELECT item_id, tag_text FROM items_tags WHERE item_id = ANY ($1)", [itemIdsArray]);
+    return tagsResult.rows;
+}
+
+const getRecipesForList = async(listId) => {
+    const client = await db.getClient();
+    const recipeIdResults = await(db.query("SELECT recipe_id FROM lists_recipes WHERE list_id=$1", [listId]));
+    const recipes = [];
+    for (const row of recipeIdResults.rows) {
+        const recipe = await getRecipe(client, row.recipe_id);
+        recipes.push(recipe);
+    }
+    client.release();
+    
+    return recipes;
+}
 
 // POST item(s) or a recipe to a list
 app.post("/api/v1/lists/:listId", async(req, res) => {
@@ -155,12 +194,10 @@ app.post("/api/v1/lists/:listId", async(req, res) => {
                         failureReason: "Item already in list"
                     })
                 } catch (e) {
-                    console.log(e);
-                    res.sendStatus(500);
+                    errorResponse(e, res);
                 }
             } else {
-                console.log(e);
-                res.sendStatus(500);
+                errorResponse(e, res);
             }
         }
     } else if (req.body.recipeId) {
@@ -210,10 +247,10 @@ const linkListToRecipe = async(client, listId, recipeId) => {
 
 const getRecipe = async (client, recipeId) => {
     const items = await getItemsFor(recipeId, client);
-    const name = await getRecipeNameFor(recipeId, client);
+    const title = await getRecipeTitleFor(recipeId, client);
     return {
         id: recipeId,
-        name,
+        title,
         items
     }
 }
@@ -227,9 +264,9 @@ const getItemsFor = async (recipeId, client) => {
     return itemDetailsResult.rows;
 }
 
-const getRecipeNameFor = async (recipeId, client) => {
+const getRecipeTitleFor = async (recipeId, client) => {
     const recipeNameResult = await (client.query('SELECT title FROM recipes WHERE id=$1', [recipeId]));
-    return recipeNameResult.rows[0].name;
+    return recipeNameResult.rows[0].title;
 }
 
 const addItemOrUpdateListQuantity = async (client, listId, itemId, quantity) => {
@@ -257,8 +294,7 @@ app.patch("/api/v1/lists/:listId", async(req, res) => {
             }
         })
     } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     }
 });
 
@@ -268,7 +304,7 @@ app.get("/api/v1/recipes", async(req, res) => {
         const [op, searchString] = req.query.title.split(".");
         if (op === "sw") {
             try {
-                const recipesResult = await db.query("SELECT title, id FROM recipes WHERE title LIKE ($1)", [searchString + "%"]);
+                const recipesResult = await db.query("SELECT title, id, quantity FROM recipes WHERE title LIKE ($1)", [searchString + "%"]);
                 res.status(200).json({
                     status: "success",
                     count: recipesResult.rows.length,
@@ -277,13 +313,12 @@ app.get("/api/v1/recipes", async(req, res) => {
                     }
                 });
             } catch (e) {
-                console.log(e);
-                res.sendStatus(500);
+                errorResponse(e, res);
             }
         }
     } else {
         try {
-            const recipes = await db.query("SELECT id, title FROM recipes");
+            const recipes = await db.query("SELECT id, title, quantity FROM recipes");
             res.status(200).json({
                 status: "success",
                 count: recipes.rows.length,
@@ -292,8 +327,7 @@ app.get("/api/v1/recipes", async(req, res) => {
                 }
             });
         } catch (e) {
-            console.log(e);
-            res.sendStatus(500);
+            errorResponse(e, res);
         }
     }
 });
@@ -302,7 +336,7 @@ app.get("/api/v1/recipes", async(req, res) => {
 app.get("/api/v1/recipes/:recipeId", async(req, res) => {
     try {
         const recipeItems = await db.query(
-            `SELECT item_id AS AS id, name
+            `SELECT item_id AS id, name, quantity
             FROM recipes_items
             INNER JOIN items ON items.id = recipes_items.item_id
             WHERE recipes_items.recipe_id = $1;`,
@@ -320,8 +354,7 @@ app.get("/api/v1/recipes/:recipeId", async(req, res) => {
             }
         })
     } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     }
 });
 
@@ -352,6 +385,7 @@ app.post("/api/v1/tags", async (req, res) => {
                 const result = await db.query('INSERT INTO items_tags (item_id, tag_text) VALUES ($1, $2) RETURNING item_id, tag_text', [itemId, req.body.tagName]);
                 rows.push(result.rows[0]);
             } catch (e) {
+                // TODO Replace with sql
                 // Increment duplicate count upon duplicate entry attempt
                 if (e.code === '23505') {
                     duplicateCount++;
@@ -367,8 +401,7 @@ app.post("/api/v1/tags", async (req, res) => {
             data: rows
         });
     } catch (e) {
-        console.log(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     }
 });
 
@@ -392,15 +425,9 @@ app.post('/api/v1/tags:delete', async(req, res) => {
     }
 });
 
-function appendTagsToItems(itemsResult, tagsResult) {
-    for (const item of itemsResult.rows) {
-        item.tags = [];
-        for (const tag of tagsResult.rows) {
-            if (tag.item_id === item.id) {
-                item.tags.push(tag.tag_text);
-            }
-        }
-    }
+const errorResponse = (error, res) => {
+    console.log(error);
+    res.sendStatus(500);
 }
 
 app.listen(PORT, () => {console.log(`Server is up and listening on port ${PORT}`)});
