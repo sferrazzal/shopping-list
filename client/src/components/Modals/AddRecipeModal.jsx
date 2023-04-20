@@ -50,9 +50,9 @@ const AddRecipeModal = (props) => {
                 setAddRecipeResultText(`Recipe "${recipeTitle}" already in list`);
             } else {
                 setAddRecipeResultText(`Successfully added ${recipeTitle}`);
+                setInputText('');
+                setSearchResults([]);    
             }
-            setInputText('');
-            setSearchResults([]);
         } else if (result.status === 'failure') {
             setAddRecipeResultText(`Failed to add recipe`);
             setResultColor('text-danger');

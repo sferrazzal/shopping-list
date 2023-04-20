@@ -25,13 +25,19 @@ const ListDetail = () => {
             setTitle(listInfo.title);
             setItems(listInfo.items);
             setRecipes(listInfo.recipes);
-            mapRecipesToItems();
         }
 
         populateListInfo();
     }, [listId])
 
+    useEffect(() => {
+        mapRecipesToItems();
+    }, [recipes])
+
     const mapRecipesToItems = () => {
+        if (recipes.length === 0) {
+            return;
+        }
         const retval = initializeRecipesForItems();
 
         for (const recipe of recipes) {
@@ -43,7 +49,6 @@ const ListDetail = () => {
             }
         }
 
-        console.log(retval);
         setRecipesForItems(retval);
     }
 
@@ -90,17 +95,6 @@ const ListDetail = () => {
     const updateItemQuantity = async (itemId, quantity) => {
         const result = await BackendApi.updateListItem(listId, itemId, quantity);
         if (result.status === 'failure') console.error(`Failed to update quantity for itemId: ${itemId}`);
-    }
-
-    const getRecipesForItem = (itemName) => {
-        if (recipes.length === 0) return;
-        const recipesForItem = [];
-        for (const recipe of recipes) {
-            if (recipe.items.includes(itemName)){
-                recipesForItem.push(recipe.title);
-            }
-        }
-        return recipesForItem;
     }
 
     return (

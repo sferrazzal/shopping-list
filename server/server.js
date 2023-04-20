@@ -304,7 +304,7 @@ app.get("/api/v1/recipes", async(req, res) => {
         const [op, searchString] = req.query.title.split(".");
         if (op === "sw") {
             try {
-                const recipesResult = await db.query("SELECT title, id, quantity FROM recipes WHERE title LIKE ($1)", [searchString + "%"]);
+                const recipesResult = await db.query("SELECT title, id FROM recipes WHERE title LIKE ($1)", [searchString + "%"]);
                 res.status(200).json({
                     status: "success",
                     count: recipesResult.rows.length,
@@ -318,7 +318,7 @@ app.get("/api/v1/recipes", async(req, res) => {
         }
     } else {
         try {
-            const recipes = await db.query("SELECT id, title, quantity FROM recipes");
+            const recipes = await db.query("SELECT id, title FROM recipes");
             res.status(200).json({
                 status: "success",
                 count: recipes.rows.length,
