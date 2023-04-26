@@ -30,33 +30,14 @@ const ListDetail = () => {
         populateListInfo();
     }, [listId])
 
-    useEffect(() => {
-        mapRecipesToItems();
-    }, [recipes])
-
-    const mapRecipesToItems = () => {
-        if (recipes.length === 0) {
-            return;
-        }
-        const retval = initializeRecipesForItems();
-
+    const getRecipesForItem = (itemName) => {
+        const retval = []
         for (const recipe of recipes) {
-            for (const item of recipe.items) {
-                retval[item.name].push({
-                    title: recipe.title,
-                    id: recipe.id
-                });
+            if (recipe.items.map((x) => x.name).includes(itemName)) {
+                retval.push(recipe);
             }
         }
 
-        setRecipesForItems(retval);
-    }
-
-    const initializeRecipesForItems = () => {
-        const retval = [];
-        for (const item of items) {
-            retval[item.name] = []
-        }
         return retval;
     }
 
@@ -108,12 +89,12 @@ const ListDetail = () => {
                 </div>
             </div>
             <div className="container">
-                {items && items.map((item) => {
+                {items && recipes && items.map((item) => {
                     return <Item 
                         key={item.id} 
                         name={item.name} 
                         id={item.id} 
-                        recipes={recipesForItems[item.name]}
+                        recipes={getRecipesForItem(item.name)}
                         tags={item.tags} 
                         quantity={item.quantity}
                         handleSubmitQuantity={(itemId, quantity) => updateItemQuantity(itemId, quantity)}
