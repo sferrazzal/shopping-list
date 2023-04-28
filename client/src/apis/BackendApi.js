@@ -70,10 +70,10 @@ const getListInfo = async (listId) => {
 };
 
 const addItemToList = async (itemId, listId) => {
-    const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
+    const listUrl = baseUrl + listsEndpoint + "/" + listId;
     const payload = JSON.stringify({itemId});
     try {
-        const response = await(post(listItemsUrl, payload))
+        const response = await(post(listUrl, payload))
         const jsonResponse = await response.json();
         return jsonResponse;
     } catch (e) {
@@ -84,27 +84,50 @@ const addItemToList = async (itemId, listId) => {
     }
 }
 
-const addItemsFromRecipe = async (listId, recipeId) => {
-    const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
+const addRecipeToList = async (listId, recipeId) => {
+    const addRecipeUrl = baseUrl + listsEndpoint + "/" + listId + "?recipeOp=add";
+    const response = await modifyListRecipeRelation(addRecipeUrl, recipeId);
+    return response;
+}
+
+const removeRecipeFromList = async (listId, recipeId) => {
+    const removeRecipeUrl = baseUrl + listsEndpoint + "/" + listId  + "?recipeOp=remove";
+    const response = await modifyListRecipeRelation(removeRecipeUrl, recipeId);
+    return response;
+}
+
+const modifyListRecipeRelation = async (url, recipeId) => {
     const payload = JSON.stringify({recipeId});
     try {
-        const response = await(post(listItemsUrl, payload))
+        const response = await(post(url, payload))
         const jsonResponse = await response.json();
         return jsonResponse;
     } catch (e) {
         return {
             status: "failure",
-            failureReason: "Unhandled error encountered when adding item"
+            failureReason: "Unhandled error encountered when adding recipe"
         }
     }
-
 }
 
 const updateListItem = async (listId, itemId, quantity) => {
-    const listItemsUrl = baseUrl + listsEndpoint + "/" + listId;
+    const listUrl = baseUrl + listsEndpoint + "/" + listId;
     const payload = JSON.stringify({itemId, quantity});
     try {
-        const response = await (patch(listItemsUrl, payload));
+        const response = await (patch(listUrl, payload));
+        const jsonResponse = await response.json();
+        return jsonResponse;
+    } catch (e) {
+        console.error(e);
+        return {status: "failure"}
+    }
+}
+
+const updateListItems = async(listId, itemsArray) => {
+    const listUrl = baseUrl + listsEndpoint + "/" + listId;
+    const payload = JSON.stringify(itemsArray);
+    try {
+        const response = await (patch(listUrl, payload));
         const jsonResponse = await response.json();
         return jsonResponse;
     } catch (e) {
@@ -179,8 +202,10 @@ const BackendApi = {
     getAllTags,
     getListInfo,
     addItemToList,
-    addItemsFromRecipe,
+    addRecipeToList,
+    removeRecipeFromList,
     updateListItem,
+    updateListItems,
     getAllRecipes,
     getRecipeInfo,
     getRecipesStartingWith,

@@ -1,5 +1,6 @@
 import React from "react";
 import { useState } from "react";
+import RemoveRecipeModal from "./Modals/RemoveRecipeModal";
 
 const Item = (props) => {
     const [checked, setChecked] = useState(false);
@@ -30,7 +31,9 @@ const Item = (props) => {
         <li className="list-group-item">
             <div className="row">
                 <div className="col d-flex justify-content-end my-1">
-                    {props.recipes && props.recipes.map(recipe => (<span className="badge bg-danger mx-1" key={props.id + recipe.title}>{recipe.title}</span>))}
+                    {props.recipes && props.recipes.map(recipe => (
+                        <RemoveRecipeModal callback={() => props.removeRecipeCallback(recipe)} key={props.id + recipe.title} id={props.id} recipe={recipe}/>
+                    ))}
                 </div>
                 <div className="col">
                     <input onClick={handleCheckClicked} className="form-check-input me-1 text-center" type="checkbox" value=""/>

@@ -12,7 +12,6 @@ const ListDetail = () => {
     const [title, setTitle] = useState();
     const [items, setItems] = useState([]);
     const [recipes, setRecipes] = useState([]);
-    const [recipesForItems, setRecipesForItems] = useState([]);
     const [checkedItemIds, setCheckedItemIds] = useState([]);
 
     const location = useLocation();
@@ -41,7 +40,7 @@ const ListDetail = () => {
         return retval;
     }
 
-    const addItem = async(itemName) => {
+    const handleAddItem = async(itemName) => {
         const addItemToDatabaseResult = await BackendApi.addItemToDatabase(itemName);
         if (addItemToDatabaseResult.status === "success") {
             const itemId = addItemToDatabaseResult.item.id;
@@ -57,20 +56,70 @@ const ListDetail = () => {
         }
     }
 
-    const addItemsFromRecipe = async(recipeId) => {
-        const result = await BackendApi.addItemsFromRecipe(listId, recipeId);
-        return result;
+    const handleAddRecipe = async(recipe) => {
+        const response = await BackendApi.addRecipeToList(listId, recipe.id);
+        setRecipes((prev) => {
+            return [...prev, response.addedRecipe]
+        });
+        setItems((prev) => {
+            const changedItems = response.addedRecipe.items;
+            const updatedItemIds = changedItems.map(x => x.id);
+            const newItems = [...prev].map((item) => {
+                if (updatedItemIds.includes(item.id)) {
+                    const updatedItem = changedItems.filter(x => x.id === item.id)[0];
+                    const newQuantity = item.quantity + updatedItem.quantity;
+                    return {...item, quantity: newQuantity}
+                } else {
+                    return {...item};
+                }
+            });
+            for (const item of changedItems) {
+                if (!newItems.map(x => x.id).includes(item.id)) {
+                    newItems.push(item);
+                }
+            }
+            
+            return [...newItems];
+        });
+
+        return response;
     }
 
     const handleItemChecked = (checked, itemId) => {
         if (checked) {
             setCheckedItemIds((prev) => {
                 return [...prev, itemId]
-            }
-                );
+            });
         } else {
             setCheckedItemIds((prev) => prev.filter(x => x !== itemId));
         }
+    }
+
+    const handleRemoveRecipe = async (recipe) => {
+        await BackendApi.removeRecipeFromList(listId, recipe.id);
+        setRecipes((prev) => {
+            return prev.filter(listRecipe => listRecipe.id !== recipe.id);
+        });
+        setItems((prev) => {
+            const recipeItemIds = recipe.items.map(x => x.id);
+            const newItems = prev.map(item => {
+                if (recipeItemIds.includes(item.id)) {
+                    const recipeItem = recipe.items.filter(x => x.id === item.id)[0];
+                    // console.log(`think we found a match. Item:`);
+                    // console.log(item);
+                    // console.log(`recipeItem:`);
+                    // console.log(recipeItem);
+                    const newQuantity = item.quantity - recipeItem.quantity;
+                    const updatedItem = {...item, quantity: newQuantity};
+                    // console.log('updated item');
+                    // console.log(updatedItem);
+                    return updatedItem;
+                } else {
+                    return item;
+                }
+            });
+            return newItems.filter(x => x.quantity >= 0);
+        })
     }
 
     const updateItemQuantity = async (itemId, quantity) => {
@@ -84,8 +133,8 @@ const ListDetail = () => {
             <Header text={title ? title: ""}></Header>
             <div className="container">
                 <div className="row">
-                    <AddRecipeModal callback={addItemsFromRecipe}></AddRecipeModal>
-                    <AddItemsModal allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} callback={addItem}></AddItemsModal>
+                    <AddRecipeModal callback={handleAddRecipe}></AddRecipeModal>
+                    <AddItemsModal allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} callback={handleAddItem}></AddItemsModal>
                 </div>
             </div>
             <div className="container">
@@ -95,6 +144,7 @@ const ListDetail = () => {
                         name={item.name} 
                         id={item.id} 
                         recipes={getRecipesForItem(item.name)}
+                        removeRecipeCallback={(recipe) => handleRemoveRecipe(recipe)}
                         tags={item.tags} 
                         quantity={item.quantity}
                         handleSubmitQuantity={(itemId, quantity) => updateItemQuantity(itemId, quantity)}
