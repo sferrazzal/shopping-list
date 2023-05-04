@@ -42,14 +42,14 @@ const AddRecipeModal = (props) => {
         setAddRecipeResultText("");
     }
 
-    const handleAddRecipe = async (recipeId, recipeTitle) => {
-        const result = await props.callback(recipeId);
+    const handleAddRecipe = async (recipe) => {
+        const result = await props.callback(recipe);
         if (result.status === 'success') {
             setResultColor('text-success');
             if (result.addedRecipe === null) {
-                setAddRecipeResultText(`Recipe "${recipeTitle}" already in list`);
+                setAddRecipeResultText(`Recipe "${recipe.title}" already in list`);
             } else {
-                setAddRecipeResultText(`Successfully added ${recipeTitle}`);
+                setAddRecipeResultText(`Successfully added ${result.addedRecipe.title}`);
                 setInputText('');
                 setSearchResults([]);    
             }
@@ -88,9 +88,9 @@ const AddRecipeModal = (props) => {
                         null
                     }
                     <ul className="list-group">
-                        {searchResults.map((result) => {
+                        {searchResults.map((recipe) => {
                             return (
-                                <li className="list-group-item list-group-item-action" key={result.id} onClick={() => handleAddRecipe(result.id, result.title)}>{result.title}</li>
+                                <li className="list-group-item list-group-item-action" key={recipe.id} onClick={() => handleAddRecipe(recipe)}>{recipe.title}</li>
                             )
                         })}
                     </ul>
