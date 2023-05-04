@@ -76,8 +76,7 @@ app.post("/api/v1/items", async(req, res) => {
                     item: existingItemResult.rows[0]
                 })
             } catch (e) {
-                console.log(e);
-                res.sendStatus(500);
+                errorResponse(e);
             }
         } else {
             errorResponse(e, res);
@@ -172,59 +171,158 @@ const getRecipesForList = async(listId) => {
     return recipes;
 }
 
-// POST item(s) or a recipe to a list
+// Operations to add or modify list contents
 app.post("/api/v1/lists/:listId", async(req, res) => {
-    if (req.body.itemId) {
-        try {
-            const result = await db.query(
-                'INSERT INTO lists_items (list_id, item_id, quantity) VALUES ($1, $2, 1)',
-                [req.params.listId, req.body.itemId]
-            );
-            res.status(201).json({
-                status: "success"
-            })
-        } catch (e) {
-            // TODO: Replace this with conditional sql
-            // Return failure message upon duplicate entry attempt
-            if (e.code === '23505') {
-                try {
-                    const existingItemResult = await db.query('SELECT id FROM items WHERE name=$1', [req.body.newItemName])
-                    res.status(200).json({
-                        status: "failure",
-                        failureReason: "Item already in list"
-                    })
-                } catch (e) {
-                    errorResponse(e, res);
-                }
-            } else {
-                errorResponse(e, res);
-            }
-        }
-    } else if (req.body.recipeId) {
-        const recipeAlreadyInList = await isRecipeInList(req.body.recipeId, req.params.listId);
-        if (recipeAlreadyInList) {
-            res.status(200).json({
-                status: 'success',
-                addedRecipe: null
-            });
-            return;
-        }
-
-        let addedRecipe = {};
-        const error = await db.tx(async (client) => {
-            addedRecipe = await addRecipeToList(client, req.params.listId, req.body.recipeId);
-        });
-        if (error) {
-            console.log(error);
-            res.sendStatus(500);
-        } else {
-            res.status(200).json({
-                status: 'success',
-                addedRecipe
-            });
-        }
+    if (isAddItemRequest(req)) {
+        await addItem(req, res);
+        return;
+    } else if (isAddRecipeRequest(req)) {
+        await addRecipeToList(req, res);
+        return;
+    } else if (isRemoveRecipeRequest(req)) {
+        await removeRecipeFromList(req, res);
+        return;
+    } else {
+        errorResponse(getInvalidRequestError(req), res)
     }
 });
+
+
+const isAddItemRequest = (req) => {
+    if (req.body.itemId) return true;
+    return false;
+}
+
+const addItem = async (req, res) => {
+    try {
+        const result = await db.query(
+            'INSERT INTO lists_items (list_id, item_id, quantity) VALUES ($1, $2, 1)',
+            [req.params.listId, req.body.itemId]
+        );
+        res.status(201).json({
+            status: "success"
+        });
+    } catch (e) {
+        // TODO: Replace this with conditional sql
+        // Return failure message upon duplicate entry attempt
+        if (e.code === '23505') {
+            try {
+                const existingItemResult = await db.query('SELECT id FROM items WHERE name=$1', [req.body.newItemName]);
+                res.status(200).json({
+                    status: "failure",
+                    failureReason: "Item already in list"
+                });
+            } catch (e) {
+                errorResponse(e, res);
+            }
+        } else {
+            errorResponse(e, res);
+        }
+    }
+}
+
+const isAddRecipeRequest = (req) => {
+    return (req.query.recipeOp === "add");
+}
+
+const addRecipeToList = async (req, res) => {
+    const recipeAlreadyInList = await isRecipeInList(req.body.recipeId, req.params.listId);
+    if (recipeAlreadyInList) {
+        res.status(200).json({
+            status: 'success',
+            addedRecipe: null
+        });
+        return;
+    }
+
+    let addedRecipe = {};
+    const error = await db.tx(async (client) => {
+        addedRecipe = await addRecipe(client, req.params.listId, req.body.recipeId);
+    });
+    if (error) {
+        errorResponse(error);
+    } else {
+        res.status(200).json({
+            status: 'success',
+            addedRecipe
+        });
+    }
+}
+
+const isRemoveRecipeRequest = (req) => {
+    return (req.query.recipeOp === "remove");
+}
+
+const removeRecipeFromList = async (req, res) => {
+    await failIfRecipeNotInList(req, res);
+    await removeRecipe(req, res);
+}
+
+const failIfRecipeNotInList = async (req, res) => {
+    const recipeInList = await isRecipeInList(req.body.recipeId, req.params.listId);
+    if (!recipeInList) {
+        errorResponse(getRecipeNotInListError(req), res);
+    }
+}
+
+const removeRecipe = async(req, res) => {
+    const error = await db.tx(async () => {
+        await unlinkRecipeFromList(req.params.listId, req.body.recipeId);
+        await removeItemsInRecipeFromList(req.params.listId, req.body.recipeId);
+        res.status(200).json({ status: "success" });
+    });
+
+    if (error) {
+        errorResponse(error, res);
+    }
+}
+
+const unlinkRecipeFromList = async (listId, recipeId) => {
+    await db.query("DELETE FROM lists_recipes WHERE list_id=$1 AND recipe_id=$2", [listId, recipeId]);
+}
+
+const removeItemsInRecipeFromList = async(listId, recipeId) => {
+    const itemsToRemove = await getItemsInRecipe(recipeId);
+    for (const item of itemsToRemove) {
+        if (await removalQuantityExceedsListQuantity(item, listId)) {
+            await removeItemFromList(item.id, listId);
+        } else {
+            await updateListQuantity(item.id, item.quantity);
+        }
+    }
+}
+
+const removalQuantityExceedsListQuantity = async (removalItem, listId) => {
+    const itemListQuantity = await getItemListQuantity(removalItem.id, listId);
+    return removalItem.quantity > itemListQuantity;
+}
+
+const getItemListQuantity = async(itemId, listId) => {
+    const result = await db.query("SELECT quantity FROM lists_items WHERE item_id=$1 AND list_id=$2", [itemId, listId]);
+    return result.rows[0].quantity;
+}
+
+const removeItemFromList = async (itemId, listId) => {
+    await db.query("DELETE from lists_items WHERE item_id=$1 AND list_id=$2", [itemId, listId])
+}
+
+const updateListQuantity = async(itemId, quantity) => {
+    await db.query("UPDATE lists_items SET quantity=$1 WHERE item_id=$2", [quantity, itemId])
+}
+
+function getInvalidRequestError(req) {
+    const invalidRequestError = new Error("Invalid request");
+    invalidRequestError.request = req;
+    return invalidRequestError;
+}
+
+
+function getRecipeNotInListError(req) {
+    const recipeNotInListError = new Error("Recipe not found in list");
+    recipeNotInListError.recipeId = req.body.recipeId;
+    recipeNotInListError.listId = req.params.listId;
+    return recipeNotInListError;
+}
 
 const isRecipeInList = async (recipeId, listId) => {
     const existingEntriesResult = await db.query("SELECT 1 from lists_recipes WHERE recipe_id=$1 AND list_id=$2", [recipeId, listId]);
@@ -232,11 +330,11 @@ const isRecipeInList = async (recipeId, listId) => {
     return false;
 }
 
-const addRecipeToList = async (client, listId, recipeId) => {
+const addRecipe = async (client, listId, recipeId) => {
     await (linkListToRecipe(client, listId, recipeId));
     const recipe = await getRecipe(client, recipeId);
     for (const item of recipe.items) {
-        await addItemOrUpdateListQuantity(client, listId, item.item_id, item.quantity);
+        await addItemOrUpdateListQuantity(client, listId, item.id, item.quantity);
     }
     return recipe;
 }
@@ -246,8 +344,9 @@ const linkListToRecipe = async(client, listId, recipeId) => {
 }
 
 const getRecipe = async (client, recipeId) => {
-    const items = await getItemsFor(recipeId, client);
+    const items = await getItemsInRecipe(recipeId);
     const title = await getRecipeTitleFor(recipeId, client);
+
     return {
         id: recipeId,
         title,
@@ -255,12 +354,16 @@ const getRecipe = async (client, recipeId) => {
     }
 }
 
-const getItemsFor = async (recipeId, client) => {
-    const itemDetailsResult = await client.query("SELECT item_id, quantity FROM recipes_items WHERE recipe_id=$1", [recipeId]);
+const getItemsInRecipe = async (recipeId) => {
+    const client = await db.getClient();
+    const itemDetailsResult = await client.query('SELECT item_id AS "id", quantity FROM recipes_items WHERE recipe_id=$1', [recipeId]);
+
     for (const item of itemDetailsResult.rows) {
-        const itemNameResult = await client.query("SELECT name FROM items WHERE id=($1)", [item.item_id]);
+        const itemNameResult = await client.query("SELECT name FROM items WHERE id=($1)", [item.id]);
         item.name = itemNameResult.rows[0].name;
     }
+
+    client.release();
     return itemDetailsResult.rows;
 }
 
@@ -280,7 +383,7 @@ const addItemOrUpdateListQuantity = async (client, listId, itemId, quantity) => 
     );
 }
 
-// PATCH info for an item in a given list
+// PATCH items in a given list
 app.patch("/api/v1/lists/:listId", async(req, res) => {
     try {
         const result = await db.query(
@@ -370,8 +473,7 @@ app.get("/api/v1/tags", async(req, res) => {
             }
         })
     } catch (e) {
-        console.error(e);
-        res.sendStatus(500);
+        errorResponse(e, res);
     }
 })
 
@@ -390,7 +492,7 @@ app.post("/api/v1/tags", async (req, res) => {
                 if (e.code === '23505') {
                     duplicateCount++;
                 } else {
-                    console.log(e);
+                    throw(e);
                 }
             }
         }      
@@ -415,8 +517,7 @@ app.post('/api/v1/tags:delete', async(req, res) => {
         }
     });
     if (error) {
-        console.log(error);
-        res.sendStatus(500);
+        errorResponse(error);
     } else {
         res.status(200).json({
             status: 'success',
