@@ -1,4 +1,4 @@
-# [Shopping List App for Web and Mobile](https://github.com/sferrazzaf/shopping-list)
+# Shopping List App for Web and Mobile
 
 ## Description
 This app is designed with a few features in mind to deliver superior functionality vs. a paper shopping list. Specifically:
