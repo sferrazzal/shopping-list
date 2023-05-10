@@ -2,56 +2,58 @@ import React from "react";
 import {useState} from "react";
 import BackendApi from "../../apis/BackendApi";
 import AddRecipeModal from "./AddRecipeModal";
+import OperationOutcomes from "../../Enums/OperationOutcomes";
 
 const AddRecipeModalController = (props) => {
     const [searchResults, setSearchResults] = useState([]);
-
-    const operationOutcomes = Object.freeze({
-        Null: '',
-        Success: 'Success',
-        NoChange: 'NoChange',
-        Failure: 'Failure'
-    });
-    const [addRecipeOperationStatus, setAddRecipeOperationStatus] = useState(operationOutcomes.Null);
+    const [resultText, setResultText] = useState("");
+    const [addRecipeOperationStatus, setAddRecipeOperationStatus] = useState(OperationOutcomes.NULL);
 
     const updateSearchResults = async (searchString) => {
-        setAddRecipeOperationStatus(operationOutcomes.Null);
+        setAddRecipeOperationStatus(OperationOutcomes.NULL);
         if (searchString === "") {
             setSearchResults([]);
             return;
         }
 
+        setResultText("");
         const results = await BackendApi.getRecipesStartingWith(searchString);
         setSearchResults(results);
     }
 
     const resetSearchResults = () => {
+        setResultText("");
         setSearchResults([]);
     }
 
     const handleAddRecipe = async (recipe) => {
         const result = await props.handleAddRecipe(recipe);
         if (result.status === 'success') {
-            setAddRecipeOperationStatus(operationOutcomes.Success);
+            setAddRecipeOperationStatus(OperationOutcomes.SUCCESS);
+            
             if (result.addedRecipe === null) {
-                setAddRecipeOperationStatus(operationOutcomes.NoChange);
+                setAddRecipeOperationStatus(OperationOutcomes.NOCHANGE);
+                setResultText(`Recipe "${recipe.title}" already in list`);
             } else {
-                setAddRecipeOperationStatus(operationOutcomes.Success);
+                setAddRecipeOperationStatus(OperationOutcomes.SUCCESS);
+                setResultText(`Successfully added recipe "${recipe.title}"`);
                 setSearchResults([]);
             }
         } else if (result.status === 'failure') {
-            setAddRecipeOperationStatus(operationOutcomes.Failure);
+            setAddRecipeOperationStatus(OperationOutcomes.FAILURE);
+            setResultText(`Failed to add recipe`);
         }
     }
 
     return (
         <AddRecipeModal
             searchResults={searchResults}
-            handleInputChange={(searchString) => updateSearchResults(searchString)}
+            handleInputChange={updateSearchResults}
             handleRecipeClicked={handleAddRecipe}
-            handleClose={() => resetSearchResults()}
-            operationOutcomes={operationOutcomes}
+            handleClose={resetSearchResults}
+            operationOutcomes={OperationOutcomes}
             addRecipeOperationStatus={addRecipeOperationStatus}
+            resultText={resultText}
         />
     );
 

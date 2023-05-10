@@ -3,35 +3,26 @@ import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/esm/Button';
 import {useState, useEffect} from 'react';
 import CloseButton from 'react-bootstrap/esm/CloseButton';
+import OperationOutcomes from '../../Enums/OperationOutcomes';
+import ResultTextColors from '../../Enums/ResultTextColors';
 
 const AddRecipeModal = (props) => {
     const [show, setShow] = useState(false);
     const [inputText, setInputText] = useState("");
-    const [submittedRecipeTitle, setSubmittedRecipeTitle] = useState("");
 
-    const [resultText, setResultText] = useState("");
-
-    const resultTextColors = Object.freeze({
-        Success: "text-success",
-        Failure: "text-danger"
-    });
-    const [resultTextColor, setResultTextColor] = useState(resultTextColors.Success);
+    const [resultTextColor, setResultTextColor] = useState(ResultTextColors.SUCCESS);
 
     useEffect(() => {
-        if (props.addRecipeOperationStatus === props.operationOutcomes.Success) {
-            setResultTextColor(resultTextColors.Success);
-            setResultText(`Successfully added recipe "${submittedRecipeTitle}"`);
+        if (props.addRecipeOperationStatus === OperationOutcomes.SUCCESS) {
             setInputText('');
-        } else if (props.addRecipeOperationStatus === props.operationOutcomes.NoChange) {
-            setResultTextColor(resultTextColors.Success);
-            setResultText(`Recipe "${submittedRecipeTitle}" already in list`);
-        } else if (props.addRecipeOperationStatus === props.operationOutcomes.Failure) {
-            setResultTextColor(resultTextColors.Failure);
-            setResultText(`Failed to add recipe`);
         }
 
-        setSubmittedRecipeTitle("");
-    }, [props.operationOutcomes])
+        if (props.addRecipeOperationStatus === OperationOutcomes.FAILURE) {
+            setResultTextColor(ResultTextColors.FAILURE);
+        } else {
+            setResultTextColor(ResultTextColors.SUCCESS);
+        }
+    }, [OperationOutcomes])
 
     const handleShow = () => {
         setShow(true);
@@ -40,7 +31,6 @@ const AddRecipeModal = (props) => {
     const handleClose = () => {
         setShow(false);
         setInputText("");
-        setResultText("");
         props.handleInputChange("");
         props.handleClose();
     }
@@ -48,12 +38,10 @@ const AddRecipeModal = (props) => {
     const handleInputChange = (e) => {
         e.preventDefault();
         setInputText(e.target.value);
-        setResultText("");
         props.handleInputChange(e.target.value);
     }
 
     const handleRecipeClicked = async (recipe) => {
-        setSubmittedRecipeTitle(recipe.title);
         await props.handleRecipeClicked(recipe);
     }
 
@@ -76,7 +64,7 @@ const AddRecipeModal = (props) => {
                             value={inputText}
                         ></input>
                     </div>
-                    <div className={resultTextColor}>{resultText}</div>
+                    <div className={resultTextColor}>{props.resultText}</div>
                 </div>
 
                 <div className="searchHits">
