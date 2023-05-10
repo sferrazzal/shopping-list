@@ -1,18 +1,37 @@
 import React from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/esm/Button';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import CloseButton from 'react-bootstrap/esm/CloseButton';
-import BackendApi from '../../apis/BackendApi';
 
 const AddRecipeModal = (props) => {
     const [show, setShow] = useState(false);
     const [inputText, setInputText] = useState("");
-    const [searchResults, setSearchResults] = useState([]);
+    const [submittedRecipeTitle, setSubmittedRecipeTitle] = useState("");
 
-    // Result Info
-    const [addRecipeResultText, setAddRecipeResultText] = useState("");
-    const [resultColor, setResultColor] = useState("text-success");
+    const [resultText, setResultText] = useState("");
+
+    const resultTextColors = Object.freeze({
+        Success: "text-success",
+        Failure: "text-danger"
+    });
+    const [resultTextColor, setResultTextColor] = useState(resultTextColors.Success);
+
+    useEffect(() => {
+        if (props.addRecipeOperationStatus === props.operationOutcomes.Success) {
+            setResultTextColor(resultTextColors.Success);
+            setResultText(`Successfully added recipe "${submittedRecipeTitle}"`);
+            setInputText('');
+        } else if (props.addRecipeOperationStatus === props.operationOutcomes.NoChange) {
+            setResultTextColor(resultTextColors.Success);
+            setResultText(`Recipe "${submittedRecipeTitle}" already in list`);
+        } else if (props.addRecipeOperationStatus === props.operationOutcomes.Failure) {
+            setResultTextColor(resultTextColors.Failure);
+            setResultText(`Failed to add recipe`);
+        }
+
+        setSubmittedRecipeTitle("");
+    }, [props.operationOutcomes])
 
     const handleShow = () => {
         setShow(true);
@@ -21,42 +40,21 @@ const AddRecipeModal = (props) => {
     const handleClose = () => {
         setShow(false);
         setInputText("");
-        setSearchResults([]);
-        setAddRecipeResultText("");
-    }
-
-    const updateSearchResults = async (searchString) => {
-        if (searchString === "") {
-            setSearchResults([]);
-            return;
-        }
-
-        const results = await BackendApi.getRecipesStartingWith(searchString);
-        setSearchResults(results);
+        setResultText("");
+        props.handleInputChange("");
+        props.handleClose();
     }
 
     const handleInputChange = (e) => {
         e.preventDefault();
         setInputText(e.target.value);
-        updateSearchResults(e.target.value);
-        setAddRecipeResultText("");
+        setResultText("");
+        props.handleInputChange(e.target.value);
     }
 
-    const handleAddRecipe = async (recipe) => {
-        const result = await props.callback(recipe);
-        if (result.status === 'success') {
-            setResultColor('text-success');
-            if (result.addedRecipe === null) {
-                setAddRecipeResultText(`Recipe "${recipe.title}" already in list`);
-            } else {
-                setAddRecipeResultText(`Successfully added ${result.addedRecipe.title}`);
-                setInputText('');
-                setSearchResults([]);    
-            }
-        } else if (result.status === 'failure') {
-            setAddRecipeResultText(`Failed to add recipe`);
-            setResultColor('text-danger');
-        }
+    const handleRecipeClicked = async (recipe) => {
+        setSubmittedRecipeTitle(recipe.title);
+        await props.handleRecipeClicked(recipe);
     }
 
     return (
@@ -78,19 +76,19 @@ const AddRecipeModal = (props) => {
                             value={inputText}
                         ></input>
                     </div>
-                    <div className={resultColor}>{addRecipeResultText}</div>
+                    <div className={resultTextColor}>{resultText}</div>
                 </div>
 
                 <div className="searchHits">
                     {
-                        searchResults.length > 0 ? 
+                        props.searchResults && props.searchResults.length > 0 ? 
                         <div className="my-1">Matching Recipes</div> :
                         null
                     }
                     <ul className="list-group">
-                        {searchResults.map((recipe) => {
+                        {props.searchResults && props.searchResults.map((recipe) => {
                             return (
-                                <li className="list-group-item list-group-item-action" key={recipe.id} onClick={() => handleAddRecipe(recipe)}>{recipe.title}</li>
+                                <li className="list-group-item list-group-item-action" key={recipe.id} onClick={async () => await handleRecipeClicked(recipe)}>{recipe.title}</li>
                             )
                         })}
                     </ul>
