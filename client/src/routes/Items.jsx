@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import BackendApi from "../apis/BackendApi";
 import Item from "../components/Item";
 import AddItemsModal from "../components/Modals/AddItemsModal";
-import AddTagsModal from "../components/Modals/AddTagsModal";
+import AddTagsModalController from "../components/Modals/AddTagsModalController";
 import DeleteItemsModal from "../components/Modals/DeleteItemsModal";
 import DeleteTagsModal from "../components/Modals/DeleteTagsModal";
 
@@ -149,7 +149,7 @@ const Items = () => {
                     <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
                 </div>
                 <div className="row my-2"  style={{margin: 'auto'}}>
-                    <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
+                    <AddTagsModalController checkedItems={checkedItems} handleAddTag={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModalController>
                     <DeleteTagsModal checkedItems={checkedItems} callback={(tagName) => deleteTagFromItems(tagName)}></DeleteTagsModal>
                 </div>
             </div>

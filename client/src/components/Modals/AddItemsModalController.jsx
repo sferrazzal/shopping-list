@@ -21,6 +21,7 @@ const AddItemsModalController = (props) => {
       }
 
     const resetSearchResults = () => {
+        setAddItemOperationStatus(OperationOutcomes.NULL);
         setResultText("");
         setSearchResults([]);
     }
