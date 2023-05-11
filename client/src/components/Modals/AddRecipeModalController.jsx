@@ -27,6 +27,7 @@ const AddRecipeModalController = (props) => {
     }
 
     const handleAddRecipe = async (recipe) => {
+        setAddRecipeOperationStatus(OperationOutcomes.NULL);
         const result = await props.handleAddRecipe(recipe);
         if (result.status === 'success') {
             setAddRecipeOperationStatus(OperationOutcomes.SUCCESS);
