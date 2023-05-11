@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import BackendApi from "../apis/BackendApi";
 import Header from "../components/Header";
 import Item from "../components/Item";
-import AddItemsModal from "../components/Modals/AddItemsModal";
+import AddItemsModalController from "../components/Modals/AddItemsModalController";
 import AddRecipeModalController from "../components/Modals/AddRecipeModalController";
 import NavBar from "../components/NavBar";
 
@@ -130,7 +130,7 @@ const ListDetail = () => {
             <div className="container">
                 <div className="row">
                     <AddRecipeModalController handleAddRecipe={handleAddRecipe}></AddRecipeModalController>
-                    <AddItemsModal allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} callback={handleAddItem}></AddItemsModal>
+                    <AddItemsModalController allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} handleAddItem={handleAddItem}></AddItemsModalController>
                 </div>
             </div>
             <div className="container">
