@@ -6,7 +6,7 @@ import Item from "../components/Item";
 import AddItemsModalController from "../components/Modals/AddItemsModalController";
 import AddTagsModalController from "../components/Modals/AddTagsModalController";
 import DeleteItemsModalController from "../components/Modals/DeleteItemsModalController";
-import DeleteTagsModal from "../components/Modals/DeleteTagsModal";
+import DeleteTagsModalController from "../components/Modals/DeleteTagsModalController";
 
 const Items = () => {
     const [items, setItems] = useState();
@@ -150,7 +150,7 @@ const Items = () => {
                 </div>
                 <div className="row my-2"  style={{margin: 'auto'}}>
                     <AddTagsModalController checkedItems={checkedItems} handleAddTag={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModalController>
-                    <DeleteTagsModal checkedItems={checkedItems} callback={(tagName) => deleteTagFromItems(tagName)}></DeleteTagsModal>
+                    <DeleteTagsModalController checkedItems={checkedItems} handleDeleteTag={(tagName) => deleteTagFromItems(tagName)}></DeleteTagsModalController>
                 </div>
             </div>
 
