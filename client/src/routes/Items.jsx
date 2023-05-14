@@ -3,10 +3,10 @@ import Header from "../components/Header";
 import { useState, useEffect } from "react";
 import BackendApi from "../apis/BackendApi";
 import Item from "../components/Item";
-import AddItemsModal from "../components/Modals/AddItemsModal";
-import AddTagsModal from "../components/Modals/AddTagsModal";
-import DeleteItemsModal from "../components/Modals/DeleteItemsModal";
-import DeleteTagsModal from "../components/Modals/DeleteTagsModal";
+import AddItemsModalController from "../components/Modals/AddItemsModalController";
+import AddTagsModalController from "../components/Modals/AddTagsModalController";
+import DeleteItemsModalController from "../components/Modals/DeleteItemsModalController";
+import DeleteTagsModalController from "../components/Modals/DeleteTagsModalController";
 
 const Items = () => {
     const [items, setItems] = useState();
@@ -145,12 +145,12 @@ const Items = () => {
             <Header text="Items"></Header>
             <div className="container">
                 <div className="row my-2" style={{margin: 'auto'}}>
-                    <AddItemsModal allowDuplicateDatabaseEntries={false} callback={(item) => addItemToDatabase(item)}></AddItemsModal>
-                    <DeleteItemsModal checkedItems={checkedItems} callback={() => deleteCheckedItems()}></DeleteItemsModal>
+                    <AddItemsModalController allowDuplicateDatabaseEntries={false} handleAddItem={(item) => addItemToDatabase(item)}></AddItemsModalController>
+                    <DeleteItemsModalController checkedItems={checkedItems} handleDeleteCheckedItems={() => deleteCheckedItems()}></DeleteItemsModalController>
                 </div>
                 <div className="row my-2"  style={{margin: 'auto'}}>
-                    <AddTagsModal checkedItems={checkedItems} callback={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModal>
-                    <DeleteTagsModal checkedItems={checkedItems} callback={(tagName) => deleteTagFromItems(tagName)}></DeleteTagsModal>
+                    <AddTagsModalController checkedItems={checkedItems} handleAddTag={(tagName) => addTagToCheckedItems(tagName)}></AddTagsModalController>
+                    <DeleteTagsModalController checkedItems={checkedItems} handleDeleteTag={(tagName) => deleteTagFromItems(tagName)}></DeleteTagsModalController>
                 </div>
             </div>
 

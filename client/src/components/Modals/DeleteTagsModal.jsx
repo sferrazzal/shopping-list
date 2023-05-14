@@ -1,16 +1,25 @@
 import React from 'react';
 import Button from 'react-bootstrap/esm/Button';
 import Modal from 'react-bootstrap/Modal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CloseButton from 'react-bootstrap/esm/CloseButton';
 import DeleteTagsModalCheckedItemList from './DeleteTagsModalCheckedItemList';
+import ResultTextColors from '../../Enums/ResultTextColors';
+import OperationOutcomes from '../../Enums/OperationOutcomes';
 
 const DeleteTagsModal = (props) => {
     const [show, setShow] = useState(false);
     const [inputText, setInputText] = useState('');
+    const [resultTextColor, setResultTextColor] = useState(ResultTextColors.SUCCESS);
 
-    const [resultText, setResultText] = useState('');
-    const [resultTextColor, setResultTextColor] = useState('text-success');
+    useEffect(() => {
+        if (props.deleteTagOperationStatus === OperationOutcomes.SUCCESS) {
+            setResultTextColor(ResultTextColors.SUCCESS);
+            setInputText('');
+        } else if (props.deleteTagOperationStatus === OperationOutcomes.FAILURE) {
+            setResultTextColor(ResultTextColors.FAILURE);
+        }
+    }, [props.deleteTagOperationStatus])
 
     const handleShow = () => {
         if (props.checkedItems.length > 0){
@@ -21,22 +30,15 @@ const DeleteTagsModal = (props) => {
     const handleClose = () => {
         setShow(false);
         setInputText('');
-        setResultText('');
+        props.handleClose();
     }
 
     const handleDeleteTag = async () => {
-        const result = await props.callback(inputText);
-        if (result.status === 'success') {
-            setInputText('');
-            setResultTextColor('text-success');
-            setResultText(`Deleted tag ${inputText} from ${result.deletedTagCount} items`);
-        } else {
-            setResultTextColor('text-danger');
-            setResultText('Failed to delete tags');
-        }
+        await props.handleDeleteTag(inputText);
     }
 
     const handleInputChange = (e) => {
+        e.preventDefault();
         setInputText(e.target.value);
     }
 
@@ -54,7 +56,7 @@ const DeleteTagsModal = (props) => {
                 </Modal.Header>
                 <Modal.Body>
                     <input type='text' className='form-control' placeholder='Enter or select tag' value={inputText} onChange={(e) => handleInputChange(e)}></input>
-                    {resultText !== "" ? <div className={resultTextColor}>{resultText}</div> : null}
+                    {props.deleteTagOperationResultText !== "" ? <div className={resultTextColor}>{props.deleteTagOperationResultText}</div> : null}
                     <div className='mt-2'>Selected Items</div>
                     <ul className='list-group border border-secondary rounded mb-2'>
                         {<DeleteTagsModalCheckedItemList checkedItems={props.checkedItems} callback={(tag) => handleTagClick(tag)}/>}

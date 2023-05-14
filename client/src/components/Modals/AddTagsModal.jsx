@@ -1,19 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+import OperationOutcomes from '../../Enums/OperationOutcomes';
+import ResultTextColors from '../../Enums/ResultTextColors';
 
 function AddTagsModal(props) {
   const [show, setShow] = useState(false);
   const [inputText, setInputText] = useState("");
 
-  // Result Info
-  const [addTagResultText, setAddTagResultText] = useState("");
   const [resultColor, setResultColor] = useState("text-success");
+  
+  useEffect(() => {
+    if (props.addTagOperationStatus === OperationOutcomes.SUCCESS) {
+        setInputText('');
+    }
+
+    if (props.addTagOperationStatus === OperationOutcomes.FAILURE) {
+        setResultColor(ResultTextColors.FAILURE);
+    } else {
+        setResultColor(ResultTextColors.SUCCESS);
+    }
+  }, [OperationOutcomes, props.resultText])
 
   const handleClose = () => {
     setShow(false);
     setInputText("");
-    setAddTagResultText("");
+    props.handleClose();
   }
 
   const handleShow = () => setShow(true);
@@ -21,25 +33,12 @@ function AddTagsModal(props) {
   const handleInputChange = (e) => {
     e.preventDefault();
     setInputText(e.target.value);
-    setAddTagResultText("");
+    props.handleInputChange();
   }
 
   const handleAddTag = async () => {
     if (inputText === "") return;
-    const result = await props.callback(inputText);
-    if (result.status === "success" && result.duplicateCount > 0) {
-      setResultColor("text-success");
-      setAddTagResultText(`${result.addedRecordCount} tags added, ${result.duplicateCount} duplicate tag(s) unchanged.`);
-      setInputText("");
-    }
-    else if (result.status === "success") {
-      setResultColor("text-success");
-      setAddTagResultText("Tag(s) updated!");
-      setInputText("");
-    } else {
-      setResultColor("text-danger");
-      setAddTagResultText("Couldn't add tags to items");
-    }
+    await props.handleAddTag(inputText);
   }
 
   return (
@@ -66,7 +65,7 @@ function AddTagsModal(props) {
                   value={inputText}
               />
             </div>
-            <div className={resultColor} >{addTagResultText}</div>
+            <div className={resultColor} >{props.resultText}</div>
             <div>
               <div className="text-center my-2">Items to tag:</div>
               <ul className="list-group">

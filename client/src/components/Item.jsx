@@ -1,6 +1,6 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import RemoveRecipeModal from "./Modals/RemoveRecipeModal";
+import RemoveRecipeModalController from "./Modals/RemoveRecipeModalController";
 
 const Item = (props) => {
     const [checked, setChecked] = useState(false);
@@ -36,7 +36,12 @@ const Item = (props) => {
             <div className="row">
                 <div className="col d-flex justify-content-end my-1">
                     {props.recipes && props.recipes.map(recipe => (
-                        <RemoveRecipeModal callback={() => props.removeRecipeCallback(recipe)} key={props.id + recipe.title} id={props.id} recipe={recipe}/>
+                        <RemoveRecipeModalController 
+                        callback={() => props.removeRecipeCallback(recipe)} 
+                        key={props.id + recipe.title} 
+                        id={props.id} 
+                        recipe={recipe}
+                        />
                     ))}
                 </div>
                 <div className="col">

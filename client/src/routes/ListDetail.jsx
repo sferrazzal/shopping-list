@@ -4,8 +4,8 @@ import { useLocation } from "react-router-dom";
 import BackendApi from "../apis/BackendApi";
 import Header from "../components/Header";
 import Item from "../components/Item";
-import AddItemsModal from "../components/Modals/AddItemsModal";
-import AddRecipeModal from "../components/Modals/AddRecipeModal";
+import AddItemsModalController from "../components/Modals/AddItemsModalController";
+import AddRecipeModalController from "../components/Modals/AddRecipeModalController";
 import NavBar from "../components/NavBar";
 
 const ListDetail = () => {
@@ -58,7 +58,8 @@ const ListDetail = () => {
 
     const handleAddRecipe = async(recipe) => {
         const response = await BackendApi.addRecipeToList(listId, recipe.id);
-        console.log(response.status);
+        if (response.addedRecipe === null) return response;
+
         setRecipes((prev) => {
             return [...prev, response.addedRecipe]
         });
@@ -128,8 +129,8 @@ const ListDetail = () => {
             <Header text={title ? title: ""}></Header>
             <div className="container">
                 <div className="row">
-                    <AddRecipeModal callback={handleAddRecipe}></AddRecipeModal>
-                    <AddItemsModal allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} callback={handleAddItem}></AddItemsModal>
+                    <AddRecipeModalController handleAddRecipe={handleAddRecipe}></AddRecipeModalController>
+                    <AddItemsModalController allowDuplicateDatabaseEntries={true} allowAddingFromSearchResults={true} handleAddItem={handleAddItem}></AddItemsModalController>
                 </div>
             </div>
             <div className="container">
