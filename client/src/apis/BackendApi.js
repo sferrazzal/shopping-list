@@ -1,4 +1,4 @@
-const baseUrl = "http://localhost:4000/api/v1/";
+const baseUrl = "http://192.168.1.3:4000/api/v1/";
 
 const itemsEndpoint = "items";
 const listsEndpoint = "lists";
