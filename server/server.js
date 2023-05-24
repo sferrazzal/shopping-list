@@ -15,7 +15,7 @@ app.get("/api/v1/items", async(req, res) => {
         const [op, searchString] = req.query.name.split(".");
         if (op === "sw") {
             try {
-                const itemsResult = await db.query("SELECT name FROM items WHERE name LIKE ($1)", [searchString + "%"]);
+                const itemsResult = await db.query("SELECT name FROM items WHERE LOWER(name) LIKE LOWER(($1))", [searchString + "%"]);
                 res.status(200).json({
                     status: "success",
                     count: itemsResult.rows.length,
@@ -316,7 +316,6 @@ function getInvalidRequestError(req) {
     return invalidRequestError;
 }
 
-
 function getRecipeNotInListError(req) {
     const recipeNotInListError = new Error("Recipe not found in list");
     recipeNotInListError.recipeId = req.body.recipeId;
@@ -407,7 +406,7 @@ app.get("/api/v1/recipes", async(req, res) => {
         const [op, searchString] = req.query.title.split(".");
         if (op === "sw") {
             try {
-                const recipesResult = await db.query("SELECT title, id FROM recipes WHERE title LIKE ($1)", [searchString + "%"]);
+                const recipesResult = await db.query("SELECT title, id FROM recipes WHERE LOWER(title) LIKE LOWER(($1))", [searchString.toLowerCase() + "%"]);
                 res.status(200).json({
                     status: "success",
                     count: recipesResult.rows.length,
