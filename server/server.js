@@ -101,7 +101,7 @@ app.post("/api/v1/items:deleteByIds", async(req, res) => {
 // GET all lists
 app.get("/api/v1/lists", async(req, res) => {
     try {
-        const result = await db.query("SELECT * FROM lists");
+        const result = await db.query("SELECT id, title, created_at FROM lists");
         res.status(200).json({
             status: "success",
             count: result.rows.length,
