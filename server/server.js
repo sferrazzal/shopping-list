@@ -61,26 +61,27 @@ const appendTagsToItems = (items, tags) => {
 // POST a new item
 app.post("/api/v1/items", async(req, res) => {
     try {
-        const result = await db.query("INSERT INTO items (name) VALUES ($1) RETURNING name, id", [req.body.newItemName]);
-        res.status(201).json({
-            status: "success",
-            item: result.rows[0]
-        });
-    } catch (e) {
-        // Return existing item upon duplicate entry attempt
-        if (e.code === '23505') {
-            try {
-                const existingItemResult = await db.query('SELECT name, id FROM items WHERE name=$1', [req.body.newItemName])
-                res.status(200).json({
-                    status: "success",
-                    item: existingItemResult.rows[0]
-                })
-            } catch (e) {
-                errorResponse(e);
-            }
+        const result = await db.query(
+            `INSERT INTO items (name) VALUES ($1)
+            ON CONFLICT ON CONSTRAINT no_duplicate_item_names DO NOTHING
+            RETURNING name, id`,
+            [req.body.newItemName]
+        );
+        // Handle duplicate entry attempt
+        if (result.rowCount === 0) {
+            const existingItemResult = await db.query('SELECT name, id FROM items WHERE name=$1', [req.body.newItemName])
+            res.status(200).json({
+                status: "success",
+                item: existingItemResult.rows[0]
+            });
         } else {
-            errorResponse(e, res);
+            res.status(201).json({
+                status: "success",
+                item: result.rows[0]
+            });
         }
+    } catch (e) {
+        errorResponse(e, res);
     }
 });
 
@@ -203,7 +204,6 @@ const addItem = async (req, res) => {
             status: "success"
         });
     } catch (e) {
-        // TODO: Replace this with conditional sql
         // Return failure message upon duplicate entry attempt
         if (e.code === '23505') {
             try {
@@ -486,7 +486,6 @@ app.post("/api/v1/tags", async (req, res) => {
                 const result = await db.query('INSERT INTO items_tags (item_id, tag_text) VALUES ($1, $2) RETURNING item_id, tag_text', [itemId, req.body.tagName]);
                 rows.push(result.rows[0]);
             } catch (e) {
-                // TODO Replace with sql
                 // Increment duplicate count upon duplicate entry attempt
                 if (e.code === '23505') {
                     duplicateCount++;
